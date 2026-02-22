@@ -1,0 +1,14 @@
+# ---- Python / local env ----
+.venv/
+__pycache__/
+*.pyc
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Logs / local outputs (DO NOT COMMIT) ----
+*.log
+local_output/
+local_data/
+tmp/
