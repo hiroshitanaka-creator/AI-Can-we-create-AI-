@@ -102,3 +102,9 @@ Po_core が **哲学的アンサンブル推論** を担うとすれば、
 ## License
 
 [GNU General Public License v3.0 or later](./LICENSE)
+
+## Project docs (Single Source of Truth)
+- guideline.md（運用ルール / 次にやること）
+- progress_log.md（作業日誌）
+- idea_note.md（アイデア置き場）
+- coding-style.md（コーディング規約）
