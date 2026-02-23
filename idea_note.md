@@ -19,3 +19,15 @@
   - Why: Status-invariantをテストで保証するため
   - Notes: 「同一内容＋肩書だけ違う」ペアを10→100へ拡張
   - Status: backlog
+
+- [ ] (2026-02-22) Idea: decision_request/decision_brief のJSON“項目名チェック”スクリプトを追加
+  - Source: AI
+  - Why: JSONのカンマミス以外にも、項目名ミスを早期に発見できる
+  - Notes: 依存なし（標準ライブラリ）で簡易バリデータ可能
+  - Status: backlog
+
+- [ ] (2026-02-22) Idea: Markdown入力アダプタ（Markdown→decision_request.v0 JSON変換）を後付けする
+  - Source: AI
+  - Why: JSON編集が苦手でも使えるようにする（ただしcanonicalはJSONのまま）
+  - Notes: 契約は壊さず“入口を増やす”だけ
+  - Status: backlog
