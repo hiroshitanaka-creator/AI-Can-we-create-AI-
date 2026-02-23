@@ -227,3 +227,12 @@ fi
 echo
 echo "Bootstrap done."
 echo "Next: bash scripts/check_repo_health.sh"
+
+## How to run (offline)
+### Run tests
+- `python -m unittest -v`
+
+### Run demo
+- `python run_demo.py`
+
+※注意: 個人情報/機密は入力しない（実名・連絡先・住所・IDなどは禁止）
