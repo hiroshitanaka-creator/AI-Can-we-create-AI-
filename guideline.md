@@ -65,9 +65,12 @@
 ## Current Next Actions
 - [x] Decision Brief の入出力（JSON/Markdown）を最小で確定 → scripts/brief.py
 - [x] aicw/ と tests/ の現状把握
-- [x] P0: 地位差分テスト10ケース（安全重視/スピード重視/バランス × 多様な肩書ペア）
-- [ ] P0: DLP テスト設計の拡充（過検知・漏れのケースを追加）
-- [ ] P0: 操作表現検知の閾値と縮退挙動を調整する
+- [x] P0: 地位差分テスト 10 → 100 ケース（10シナリオ × 10ステータスペアの直積）
+- [x] P0: DLP テスト設計の拡充（過検知・漏れのケース）→ 16ケース
+- [x] P0: 操作表現検知を warn/block 2段階化 + 落選理由コードを細分化
+- [x] D: scripts/validate_request.py（JSON バリデータ）を追加
+- [ ] P0: DLP の過検知を warn 化（バージョン文字列の IP_LIKE など）
+- [ ] P1: Po_core 取り込みに向けた入出力スキーマの固定化
 
 ## How to run / test
 

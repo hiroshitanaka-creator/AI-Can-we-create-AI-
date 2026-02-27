@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Literal
 
 
 @dataclass(frozen=True)
@@ -50,18 +50,31 @@ _BLOCK_PATTERNS: List[Tuple[str, re.Pattern[str], str]] = [
 ]
 
 
+@dataclass(frozen=True)
+class ManipulationHit:
+    phrase: str
+    severity: Literal["block", "warn"]
+
+
 # 操作・扇動っぽい表現（P0: 最小）
 # 重要: ここは「言論統制」ではなく、No-Go(#4)を守るための出力チェック。
-_MANIPULATION_PHRASES = [
+#
+# block: 強い操作/扇動表現。検知したら必ず停止。
+# warn : 文脈次第では問題ない表現。レポートに警告を追加するがブロックしない。
+_MANIPULATION_BLOCK_PHRASES: List[str] = [
+    "従え",
+    "拡散",
+    "炎上",
+    "許せない",
+    "扇動",
+    "洗脳",
+]
+_MANIPULATION_WARN_PHRASES: List[str] = [
     "今すぐ",
     "絶対",
     "必ず",
     "間違いなく",
     "信じて",
-    "従え",
-    "拡散",
-    "炎上",
-    "許せない",
 ]
 
 
@@ -128,14 +141,19 @@ def guard_text(text: str) -> Tuple[bool, str, List[Finding]]:
     return True, text, []
 
 
-def scan_manipulation(text: str) -> List[str]:
+def scan_manipulation(text: str) -> List[ManipulationHit]:
     """
     Returns: 検知したフレーズ一覧（空ならOK）
+      severity="block" → 必ず停止（No-Go #4）
+      severity="warn"  → 警告のみ、ブロックしない
     """
-    hits: List[str] = []
+    hits: List[ManipulationHit] = []
     if not text:
         return hits
-    for p in _MANIPULATION_PHRASES:
+    for p in _MANIPULATION_BLOCK_PHRASES:
         if p in text:
-            hits.append(p)
+            hits.append(ManipulationHit(phrase=p, severity="block"))
+    for p in _MANIPULATION_WARN_PHRASES:
+        if p in text:
+            hits.append(ManipulationHit(phrase=p, severity="warn"))
     return hits

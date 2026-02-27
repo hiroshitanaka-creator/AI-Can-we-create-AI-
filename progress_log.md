@@ -1,6 +1,44 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-02-27
+
+### Goal
+- 操作表現検知を warn/block 2段階に強化する
+- 地位差分テストを 10 → 100 ケースへ拡充する
+- 落選理由コードを細分化して説明可能性を上げる
+- JSON バリデータスクリプトを追加する
+
+### Done
+- `aicw/safety.py`: `ManipulationHit` dataclass を追加。`scan_manipulation` を warn/block 2段階に分離
+  - **block**: 従え・拡散・炎上・許せない・扇動・洗脳（即停止）
+  - **warn** : 今すぐ・絶対・必ず・間違いなく・信じて（警告のみ、ブロックしない）
+- `aicw/decision.py`:
+  - `_SAFETY_WORD_CODES` / `_SPEED_WORD_CODES` で制約キーワード → reason_code マッピングを細分化
+    - SAFETY_FIRST / RISK_AVOIDANCE / COMPLIANCE_FIRST / QUALITY_FIRST / SPEED_FIRST / DEADLINE_DRIVEN / URGENCY_FIRST / NO_CONSTRAINTS
+  - `_NOT_SELECTED_CODES` で落選理由コードを意味のある値に変更
+    - LESS_SAFE_THAN_A / LEAST_SAFE_OPTION / OVERLY_CONSERVATIVE / OVERLY_AGGRESSIVE / SLOWEST_OPTION / LESS_FAST_THAN_C
+  - warn hit のみの場合: report に `warnings` フィールドを追加（ブロックしない）
+- `tests/test_p0_manipulation.py`: 2ケース → 8ケースに拡充（warn/block 区別、ManipulationHit の型確認など）
+- `tests/test_p0_status_diff.py`: 10 → 100 ケース（10シナリオ × 10ステータスペアの直積）
+- `scripts/validate_request.py`: 新規追加（項目名ミス・型ミス・タイポ検出、exit code 0/1/2）
+- 全 122 テスト PASS を確認
+
+### Decisions
+- warn は「出力に残すが警告を付ける」、block は「即停止」で統一
+- reason_code は制約ごとに変わる（複数マッチは全て記録・ソートして返す）
+- バリデータは標準ライブラリのみ（依存追加なし）
+
+### Risks / Unknowns
+- warn フレーズが出力に含まれる場合、`warnings` フィールドが増えるが format_report の[Warnings]セクションに出る → Po_core 側でどう扱うかは未確定
+- 100 ケースは 10 シナリオ × 10 ステータスペア。シナリオが増えれば自動で比例増加する
+
+### Next
+- P0: 操作表現の warn フレーズを見直す（文脈次第で warn/block を切り替える仕組みは P1 以降）
+- P0: DLP の warn 化（将来、バージョン番号 IP_LIKE などの過検知を warn にする）
+- P1: format_report の [Warnings] セクションを CLI 出力でどう見せるか検討
+- P1: Po_core 取り込みに向けた入出力スキーマの固定化
+
 ## 2026-02-22
 
 ### Goal
