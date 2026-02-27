@@ -137,14 +137,19 @@ DECISION_BRIEF_V0: Dict[str, Any] = {
     "reason_codes": {
         "description": "selection.reason_codes / not_selected_reason_code で使用するコード",
         "selection": {
-            "SAFETY_FIRST":    "制約に「安全」が含まれる",
-            "RISK_AVOIDANCE":  "制約に「リスク」が含まれる",
-            "COMPLIANCE_FIRST":"制約に「法令」「コンプラ」が含まれる",
-            "QUALITY_FIRST":   "制約に「品質」が含まれる",
-            "SPEED_FIRST":     "制約に「スピード」「早く」が含まれる",
-            "DEADLINE_DRIVEN": "制約に「期限」「納期」が含まれる",
-            "URGENCY_FIRST":   "制約に「至急」が含まれる",
-            "NO_CONSTRAINTS":  "制約なし（デフォルトバランス）",
+            # 制約系
+            "SAFETY_FIRST":         "制約に「安全」が含まれる",
+            "RISK_AVOIDANCE":        "制約に「リスク」が含まれる",
+            "COMPLIANCE_FIRST":      "制約に「法令」「コンプラ」が含まれる",
+            "QUALITY_FIRST":         "制約に「品質」が含まれる",
+            "SPEED_FIRST":           "制約に「スピード」「早く」が含まれる",
+            "DEADLINE_DRIVEN":       "制約に「期限」「納期」が含まれる",
+            "URGENCY_FIRST":         "制約に「至急」が含まれる",
+            "NO_CONSTRAINTS":        "制約なし（デフォルトバランス）",
+            # 生存構造倫理系（#5 Existence Ethics）
+            "EXISTENCE_RISK_LOW":    "生存構造への歪みリスクが低い（明確な破壊パターン未検知）",
+            "EXISTENCE_RISK_MEDIUM": "生存構造への影響に注意（ライフサイクルと破壊の両方を検知）",
+            "EXISTENCE_LIFECYCLE_OK":"自然なライフサイクルの範囲内と判定",
         },
         "not_selected": {
             "N/A":                "この案が推奨",
@@ -154,6 +159,12 @@ DECISION_BRIEF_V0: Dict[str, Any] = {
             "OVERLY_AGGRESSIVE":  "速度側に振れすぎ（バランス推奨時）",
             "SLOWEST_OPTION":     "3案中最も時間がかかる",
             "LESS_FAST_THAN_C":   "Cより時間がかかる",
+        },
+        # blocked_by で使用する値
+        "blocked_by_values": {
+            "#6 Privacy":          "入力に個人情報/機密を検知",
+            "#5 Existence Ethics": "私益による生存構造の破壊を検知（自然なライフサイクルではない）",
+            "#4 Manipulation":     "出力に操作/扇動表現を検知",
         },
     },
 }

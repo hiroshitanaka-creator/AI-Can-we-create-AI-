@@ -150,6 +150,7 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
     """
     P0: オフライン・非公開用の最小意思決定支援。
     - #6: 機密っぽい入力があれば停止して代替案を返す
+    - #5: 私益による生存構造の破壊を検知したら停止する
     - #3: 肩書・地位は入力にあっても結論に使わない
     - #4: 出力に操作表現が混ざれば縮退（停止）する
     """
@@ -188,9 +189,44 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
             "redacted_preview": redacted_blob,
         }
 
-    # --- build report (status-invariant) ---
+    # --- No-Go #5: existence ethics guard ---
+    # existence_analysis を早期に計算し、私益による破壊を止める
+    existence_analysis = _analyze_existence(
+        situation, constraints, options,
+        beneficiaries_in, affected_structures_in,
+    )
+    if existence_analysis["question_3_judgment"] == "self_interested_destruction":
+        all_text = " ".join([situation] + constraints + options)
+        detected_kws = [kw for kw in _DESTRUCTION_KEYWORDS if kw in all_text]
+        return {
+            "status": "blocked",
+            "blocked_by": "#5 Existence Ethics",
+            "reason": "入力に私益による生存構造の破壊が検知されました。いったん停止します。",
+            "detected": detected_kws,
+            "safe_alternatives": [
+                "受益者と影響を受ける構造を明示して選択肢を再構成する",
+                "「誰が損するか」「それは自然な循環か」を明示的に確認する",
+                "ライフサイクル的な変化として再フレーミングできるか検討する",
+            ],
+        }
+
+    # --- build report ---
     constraints_text = " / ".join(constraints)
     rec_id, reason_codes, explanation = _choose_recommendation(constraints_text)
+
+    # A: existence_analysis の結果を selection に接続
+    existence_judgment = existence_analysis["question_3_judgment"]
+    existence_risk = existence_analysis["distortion_risk"]
+    if existence_risk == "medium":
+        explanation += " 生存構造への歪みリスク: 中（文脈確認を推奨）。"
+        reason_codes = reason_codes + ["EXISTENCE_RISK_MEDIUM"]
+    elif existence_judgment == "lifecycle":
+        explanation += " 生存構造: 自然なライフサイクルの範囲内と判定。歪みリスク: 低。"
+        reason_codes = reason_codes + ["EXISTENCE_LIFECYCLE_OK"]
+    else:
+        # unclear + low（最多ケース）
+        explanation += " 生存構造への歪みリスク: 低（明確な破壊パターン未検知）。"
+        reason_codes = reason_codes + ["EXISTENCE_RISK_LOW"]
 
     candidates = [
         {"id": cid, "summary": options[i], "not_selected_reason_code": (
@@ -203,7 +239,7 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
         "status": "ok",
         "meta": {
             "version": "p0",
-            "no_go": ["#6", "#3", "#4"],
+            "no_go": ["#6", "#5", "#3", "#4"],
             "offline_first": True,
         },
         "input": {
@@ -235,10 +271,7 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
             "失敗した時、最悪どこまで起きる？",
             "影響を受ける人は誰？（チーム外も含む）",
         ],
-        "existence_analysis": _analyze_existence(
-            situation, constraints, options,
-            beneficiaries_in, affected_structures_in,
-        ),
+        "existence_analysis": existence_analysis,
     }
 
     # --- No-Go #4: anti-manipulation guard (output) ---

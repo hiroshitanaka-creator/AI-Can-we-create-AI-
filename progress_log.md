@@ -1,6 +1,49 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-02-27 (session 4)
+
+### Goal
+- A: existence_analysis → selection.explanation / reason_codes に接続
+- B: self_interested_destruction → No-Go #5 として block 化
+
+### Done
+- `aicw/decision.py`:
+  - `build_decision_report()` をリストラクチャ: existence_analysis を早期計算に移動
+  - No-Go #5 Existence Ethics ガード実装: `self_interested_destruction` なら即停止
+    - `blocked_by: "#5 Existence Ethics"`、detected に破壊キーワードリストを返す
+  - A: `_choose_recommendation()` の結果に existence 情報を接続
+    - `lifecycle` → explanation に "自然なライフサイクル" 追記 + `EXISTENCE_LIFECYCLE_OK` を reason_codes に追加
+    - `unclear + medium` → explanation に "歪みリスク: 中" 追記 + `EXISTENCE_RISK_MEDIUM`
+    - `unclear + low` → explanation に "歪みリスク: 低" 追記 + `EXISTENCE_RISK_LOW`
+  - `meta.no_go` を `["#6", "#5", "#3", "#4"]` に更新
+- `aicw/schema.py`:
+  - `reason_codes.selection` に `EXISTENCE_RISK_LOW` / `EXISTENCE_RISK_MEDIUM` / `EXISTENCE_LIFECYCLE_OK` を追加
+  - `reason_codes.blocked_by_values` を新設（`#6 Privacy` / `#5 Existence Ethics` / `#4 Manipulation`）
+- `guideline.md`:
+  - No-Go に `#5 Existence Structure Destruction is forbidden` を追記
+  - No-Go の優先順位を明記（#6 → #5 → #3 diff → #4）
+  - Current Next Actions を更新
+- `tests/test_schema_integrity.py`:
+  - `test_existence_analysis_detects_destruction_keyword` を「blocked (#5)」を確認する形に更新
+- `tests/test_p0_existence.py`（新規）: 26件追加
+  - TestNoGo5Block: 破壊キーワード → blocked (6ケース)、ブロックされないケース (4ケース)
+  - TestNoGo5Meta: meta.no_go に #5 が含まれることを確認
+  - TestExistenceConnection: reason_codes/explanation への接続確認 (9ケース)
+  - TestSchemaConsistency: スキーマ整合性確認 (2ケース)
+- 全 185 テスト PASS
+
+### Decisions
+- `self_interested_destruction`（破壊語のみ、lifecycle 語なし）→ 即ブロック
+- `unclear + medium`（破壊語 + lifecycle 語の両方）→ ok だが警告コード付き（文脈は人間が判断）
+- No-Go チェックの順序: #6 Privacy → #5 Existence Ethics → #4 Manipulation（先着）
+
+### Next
+- P2: 破壊キーワードの精度向上（「阻止」「妨害」は文脈で正当なケースもある）
+- P2: 5層構造キーワードの拡充
+
+---
+
 ## 2026-02-27 (session 3)
 
 ### Goal

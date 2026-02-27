@@ -39,12 +39,21 @@ No-Go (#3/#4/#6) はこの原則の**派生**：
 
 ## Non-negotiables (No-Go)
 - Privacy breach is forbidden (#6).
+- **Existence structure destruction is forbidden (#5).** ← Existence Ethics Principle の派生
+  - 私益のために他の生存構造を破壊しようとする入力は停止する
+  - 自然なライフサイクル（終了・移行・世代交代）はOK
 - Discrimination / harm concentration is forbidden (#3).
 - Manipulation / agitation is forbidden (#4).
 - 違反リスク検知時は縮退/停止（安全側に倒す）
   - どこが危険か（理由）
   - 安全な代替案（次にできること）
   を必ず提示する
+
+### No-Go の優先順位
+```
+#6 Privacy → #5 Existence Ethics → (#3 diff テスト) → #4 Manipulation
+```
+先に出た違反で止まる（複数違反があっても最初の1つで停止）。
 
 ## Core Principles
 - Status-invariant: 肩書・権威で結論を変えない
@@ -109,9 +118,12 @@ No-Go (#3/#4/#6) はこの原則の**派生**：
 - [x] Existence Ethics Principle を guideline.md・schema.py に定義
 - [x] 入力フォーマットに beneficiaries / affected_structures を追加（A）
 - [x] decision.py に existence_analysis（3問分析）を実装（B）
+- [x] No-Go #5 実装: self_interested_destruction → blocked (#5 Existence Ethics)
+- [x] A: existence_analysis → selection.explanation / reason_codes に接続
+- [x] EXISTENCE_RISK_LOW / MEDIUM / LIFECYCLE_OK を schema に追加
+- [x] tests/test_p0_existence.py 追加（26件）
 - [ ] P2: 5層構造キーワードの拡充（生存構造の自動検出精度を上げる）
-- [ ] P2: 私益による破壊パターンの検出強化（No-Go #5 相当）
-- [ ] P2: existence_analysis の判定をテストで検証する
+- [ ] P2: 破壊キーワードの精度向上（文脈依存の誤検知を減らす）
 
 ## How to run / test
 
