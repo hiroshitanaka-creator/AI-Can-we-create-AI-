@@ -1,6 +1,83 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-02-27 (session 3)
+
+### Goal
+- Existence Ethics Principle（生存構造倫理原則）をコアに組み込む
+  - C: guideline.md に原則を定義
+  - A: 入力フォーマットに beneficiaries / affected_structures を追加
+  - B: decision.py に existence_analysis（3問分析）を実装
+
+### Done
+- `guideline.md`:
+  - Project Goal を「倫理を軸に持つLLMとは異なるAIを作る」に更新
+  - `Existence Ethics Principle` セクションを新設（歪みの定義 / 5層構造 / 3つの問い / No-Goとの関係）
+  - Core Principles に `Existence-preserving` を追加
+  - Current Next Actions を更新（完了済みチェック + 新P2タスク追加）
+  - Input JSON format に beneficiaries / affected_structures を追記
+- `aicw/schema.py`:
+  - `DECISION_REQUEST_V0.allowed_fields` に `beneficiaries` / `affected_structures` を追加
+  - `DECISION_REQUEST_V0.fields` に両フィールドの定義を追加
+  - `DECISION_BRIEF_V0.fields` に `existence_analysis`（required_if: status == ok）を追加
+  - `validate_request()` に beneficiaries / affected_structures の型チェックを追加
+  - `_TYPO_HINTS` にタイポヒントを追加
+- `aicw/decision.py`:
+  - 生存構造5層キーワード辞書 `_EXISTENCE_STRUCTURE_KEYWORDS` を定義
+  - 私益による破壊キーワード `_DESTRUCTION_KEYWORDS` を定義
+  - 自然なライフサイクルキーワード `_LIFECYCLE_KEYWORDS` を定義
+  - `_analyze_existence()` 関数を実装（3問 → judgment/distortion_risk/judgment_text）
+  - `build_decision_report()`: beneficiaries / affected_structures を受け取り existence_analysis を出力に追加
+  - `format_report()`: [Existence Analysis] セクションを追加
+- `tests/test_schema_integrity.py`: 13ケース追加（existence_analysis の構造・enum・受益者入力・構造入力・キーワード検出）
+- 全 159 テスト PASS
+
+### Decisions
+- 生存構造原則は「フィルター」ではなく「推論の核（エンジン）」として定義
+- judgment は lifecycle / self_interested_destruction / unclear の3値
+- beneficiaries / affected_structures は任意入力（未指定時は自動検出 or 不明表示）
+- 私益による破壊キーワードと自然なライフサイクルキーワードを分離して判定
+
+### Next
+- P2: 5層構造キーワードの拡充（自動検出精度を上げる）
+- P2: 私益による破壊パターンの検出強化
+- P2: existence_analysis の判定をより多くのシナリオでテスト検証
+
+---
+
+## 2026-02-27 (session 2)
+
+### Goal
+- P0: DLP の IP_LIKE を warn 化（バージョン文字列の過検知を解消）
+- P1: 入出力スキーマを aicw/schema.py に固定化（Po_core 取り込み前提）
+
+### Done
+- `aicw/safety.py`:
+  - `_BLOCK_PATTERNS` → `_PRIVACY_PATTERNS` に名称変更し、各エントリに `severity` フィールドを追加
+  - `IP_LIKE` を `severity="warn"` に変更（バージョン文字列等の誤検知が多いため）
+  - `guard_text`: block 検知がなければ allowed=True。redact は block のみ対象。全 findings を返却
+- `aicw/decision.py`:
+  - DLP warn findings を report["warnings"] に DLP 警告として追記
+  - manipulation warn + DLP warn を all_warnings にまとめて格納
+- `aicw/schema.py`（新規）:
+  - DECISION_REQUEST_V0 / DECISION_BRIEF_V0 をスキーマ dict で定義
+  - validate_request() 関数を実装（標準ライブラリのみ）
+  - reason_code 一覧を Po_core 向けの"契約"として記録
+- `aicw/__init__.py`: schema のエクスポートを追加
+- `scripts/validate_request.py`: ロジックを aicw.schema に委譲（CLI ラッパーのみに）
+- `tests/test_p0_privacy.py`:
+  - test_warns_ip_like / test_ip_like_creates_dlp_warning_in_report / test_version_string_warns_not_blocks 追加
+- 全 123 テスト PASS
+
+### Decisions
+- IP_LIKE は warn 化。POSTAL_CODE_LIKE は引き続き block（次セッションで再検討）
+- スキーマは Python dict で管理（jsonschema 等の依存なし）
+
+### Next
+- P1: decision_brief の出力が schema と整合しているかテストで検証
+- P1: POSTAL_CODE_LIKE の warn 化を検討
+- Po_core への移植タイミングの検討
+
 ## 2026-02-27
 
 ### Goal

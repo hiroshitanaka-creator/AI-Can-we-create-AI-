@@ -5,6 +5,92 @@ from typing import Any, Dict, List, Tuple
 from .safety import guard_text, scan_manipulation
 
 
+# ---------------------------------------------------------------------------
+# 生存構造倫理原則（Existence Ethics Principle）
+# ---------------------------------------------------------------------------
+# 生存構造の5層キーワード
+_EXISTENCE_STRUCTURE_KEYWORDS: Dict[str, List[str]] = {
+    "個人": ["個人", "本人", "自分", "プライバシー", "尊厳", "健康", "私", "当事者"],
+    "関係": ["家族", "コミュニティ", "信頼", "チーム", "組織", "同僚", "顧客", "パートナー", "関係者"],
+    "社会": ["社会", "制度", "公平", "多様性", "民主", "法律", "規制", "市場", "業界"],
+    "認知": ["自律", "判断", "思考", "意思決定", "自由", "考え", "選択"],
+    "生態": ["環境", "自然", "持続可能", "生態", "エネルギー", "資源"],
+}
+
+# 私益による破壊を示すキーワード
+_DESTRUCTION_KEYWORDS: List[str] = [
+    "破壊", "潰す", "排除", "独占", "支配", "奪う", "封じる", "妨害", "阻止",
+    "蹴落とす", "つぶす", "妨げる",
+]
+
+# 自然なライフサイクルを示すキーワード
+_LIFECYCLE_KEYWORDS: List[str] = [
+    "終了", "撤退", "引退", "完了", "終焉", "移行", "交代", "更新", "卒業",
+    "閉鎖", "廃止", "リプレイス", "世代交代",
+]
+
+
+def _analyze_existence(
+    situation: str,
+    constraints: List[str],
+    options: List[str],
+    beneficiaries_in: List[str],
+    affected_structures_in: List[str],
+) -> Dict[str, Any]:
+    """
+    生存構造倫理原則に基づく3問分析。
+    Q1: 受益者は誰か？
+    Q2: 影響を受ける構造は何か？
+    Q3: それは自然な循環か、私益による破壊か？
+    """
+    all_text = " ".join([situation] + constraints + options)
+
+    # Q1: 受益者
+    beneficiaries: List[str] = beneficiaries_in if beneficiaries_in else [
+        "不明（入力に beneficiaries を追加すると精度が上がります）"
+    ]
+
+    # Q2: 影響を受ける生存構造
+    if affected_structures_in:
+        detected_structures = affected_structures_in
+    else:
+        detected_structures = [
+            layer for layer, keywords in _EXISTENCE_STRUCTURE_KEYWORDS.items()
+            if any(kw in all_text for kw in keywords)
+        ]
+        if not detected_structures:
+            detected_structures = ["不明（入力に affected_structures を追加すると精度が上がります）"]
+
+    # Q3: 自然な循環か、私益による破壊か
+    has_destruction = any(kw in all_text for kw in _DESTRUCTION_KEYWORDS)
+    has_lifecycle = any(kw in all_text for kw in _LIFECYCLE_KEYWORDS)
+
+    if has_destruction and not has_lifecycle:
+        judgment = "self_interested_destruction"
+        distortion_risk = "high"
+        judgment_text = "私益による破壊の可能性を検知。受益者・影響構造を確認し、代替案を検討してください。"
+    elif has_lifecycle and not has_destruction:
+        judgment = "lifecycle"
+        distortion_risk = "low"
+        judgment_text = "自然なライフサイクルの範囲内と判断。生命の循環として歪みは低いと評価。"
+    elif has_destruction and has_lifecycle:
+        judgment = "unclear"
+        distortion_risk = "medium"
+        judgment_text = "ライフサイクルと破壊の両方を検知。文脈で「誰の私益か」を確認してください。"
+    else:
+        judgment = "unclear"
+        distortion_risk = "low"
+        judgment_text = "明確な破壊・循環パターンは未検知。歪みのリスクは現時点で低いと評価。"
+
+    return {
+        "question_1_beneficiaries": beneficiaries,
+        "question_2_affected_structures": detected_structures,
+        "question_3_judgment": judgment,
+        "distortion_risk": distortion_risk,
+        "judgment_text": judgment_text,
+    }
+
+
 def _as_list(x: Any) -> List[str]:
     if x is None:
         return []
@@ -70,6 +156,8 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
     situation = str(request.get("situation", "")).strip()
     constraints = _as_list(request.get("constraints"))
     options_in = _as_list(request.get("options"))
+    beneficiaries_in = _as_list(request.get("beneficiaries"))
+    affected_structures_in = _as_list(request.get("affected_structures"))
 
     # P0は候補が足りないとき、固定の3案を補う（Explainable selectionの形だけ作る）
     defaults = ["A: 安全側（失敗を減らす）", "B: バランス（中庸）", "C: 速度側（進行を優先）"]
@@ -83,8 +171,11 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
     # --- No-Go #6: privacy guard ---
     blob = "\n".join([situation] + constraints + options)
     allowed, redacted_blob, findings = guard_text(blob)
+    block_dlp = [f for f in findings if f.severity == "block"]
+    warn_dlp = [f for f in findings if f.severity == "warn"]
+
     if not allowed:
-        detected = sorted({f.kind for f in findings})
+        detected = sorted({f.kind for f in block_dlp})
         return {
             "status": "blocked",
             "blocked_by": "#6 Privacy",
@@ -144,6 +235,10 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
             "失敗した時、最悪どこまで起きる？",
             "影響を受ける人は誰？（チーム外も含む）",
         ],
+        "existence_analysis": _analyze_existence(
+            situation, constraints, options,
+            beneficiaries_in, affected_structures_in,
+        ),
     }
 
     # --- No-Go #4: anti-manipulation guard (output) ---
@@ -164,11 +259,14 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
             ],
         }
 
-    if warn_hits:
-        report["warnings"] = [
-            f"注意: 出力に断定的な表現が含まれています → 「{h.phrase}」"
-            for h in warn_hits
-        ]
+    # DLP warn + manipulation warn をまとめて warnings フィールドに追加
+    all_warnings: List[str] = []
+    for f in warn_dlp:
+        all_warnings.append(f"DLP注意[{f.kind}]: {f.message}")
+    for h in warn_hits:
+        all_warnings.append(f"注意: 出力に断定的な表現が含まれています → 「{h.phrase}」")
+    if all_warnings:
+        report["warnings"] = all_warnings
 
     return report
 
@@ -231,6 +329,15 @@ def format_report(report: Dict[str, Any]) -> str:
     lines.append("[Next Questions]")
     for x in report["next_questions"]:
         lines.append(f"- {x}")
+
+    ea = report.get("existence_analysis")
+    if ea:
+        lines.append("")
+        lines.append("[Existence Analysis]")
+        lines.append(f"- Q1 受益者: {', '.join(ea.get('question_1_beneficiaries', []))}")
+        lines.append(f"- Q2 影響構造: {', '.join(ea.get('question_2_affected_structures', []))}")
+        lines.append(f"- Q3 判定: {ea.get('question_3_judgment')} / 歪みリスク: {ea.get('distortion_risk')}")
+        lines.append(f"- 説明: {ea.get('judgment_text')}")
 
     warnings = report.get("warnings") or []
     if warnings:
