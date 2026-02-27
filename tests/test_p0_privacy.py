@@ -35,13 +35,16 @@ class TestP0Privacy(unittest.TestCase):
         kinds = {f.kind for f in findings if f.severity == "block"}
         self.assertIn("SECRET_LIKE_LONG", kinds)
 
-    def test_blocks_postal_code_like(self):
+    def test_warns_postal_code_like(self):
+        # POSTAL_CODE_LIKE は warn レベル（品番・識別コード等の誤検知があるため）
         s = "100" + "-" + "0001"
-        text = "住所: 東京都千代田区 " + s
-        allowed, redacted, findings = guard_text(text)
-        self.assertFalse(allowed)
-        kinds = {f.kind for f in findings if f.severity == "block"}
-        self.assertIn("POSTAL_CODE_LIKE", kinds)
+        text = "住所エリア: " + s
+        allowed, _redacted, findings = guard_text(text)
+        self.assertTrue(allowed, "POSTAL_CODE_LIKE は warn 化済みなのでブロックされない")
+        warn_kinds = {f.kind for f in findings if f.severity == "warn"}
+        block_kinds = {f.kind for f in findings if f.severity == "block"}
+        self.assertIn("POSTAL_CODE_LIKE", warn_kinds)
+        self.assertNotIn("POSTAL_CODE_LIKE", block_kinds)
 
     def test_blocks_secret_keyword_token(self):
         text = "token: abc123"
@@ -104,6 +107,19 @@ class TestP0Privacy(unittest.TestCase):
         self.assertIn("warnings", report)
         warning_text = " ".join(report["warnings"])
         self.assertIn("IP_LIKE", warning_text)
+
+    def test_postal_code_creates_dlp_warning_in_report(self):
+        # 郵便番号っぽい文字列が入力にあると report["warnings"] に DLP 警告が追加される
+        req = {
+            "situation": "エリア " + "100-0001" + " の配送方針を決めたい",
+            "constraints": [],
+            "options": ["案A", "案B", "案C"],
+        }
+        report = build_decision_report(req)
+        self.assertEqual("ok", report["status"])
+        self.assertIn("warnings", report)
+        warning_text = " ".join(report["warnings"])
+        self.assertIn("POSTAL_CODE_LIKE", warning_text)
 
     def test_version_string_warns_not_blocks(self):
         # バージョン番号 1.2.3.4 は IP_LIKE に誤検知されるが、warn なのでブロックしない

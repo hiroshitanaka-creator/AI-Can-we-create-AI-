@@ -36,8 +36,8 @@ _PRIVACY_PATTERNS: List[Tuple[str, re.Pattern[str], str, str]] = [
     (
         "POSTAL_CODE_LIKE",
         re.compile(r"\b\d{3}-\d{4}\b"),
-        "郵便番号っぽい文字列が含まれています（個人情報の可能性）。",
-        "block",
+        "郵便番号っぽい文字列が含まれています（個人情報の可能性）。品番・ロット番号等の誤検知あり。",
+        "warn",  # 品番・識別コード等の誤検知が多く、単体では PII 価値が低いため warn に変更
     ),
     (
         "IP_LIKE",

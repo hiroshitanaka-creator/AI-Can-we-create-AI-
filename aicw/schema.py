@@ -95,7 +95,7 @@ DECISION_BRIEF_V0: Dict[str, Any] = {
         "warnings": {
             "type": "list[str]",
             "required": False,
-            "description": "warn レベルの検知（DLP[IP_LIKE] / 操作表現 warn）",
+            "description": "warn レベルの検知（DLP[IP_LIKE, POSTAL_CODE_LIKE] / 操作表現 warn）",
         },
         # --- blocked 時のみ ---
         "blocked_by":        {"type": "str",       "required_if": "status == blocked"},
