@@ -195,6 +195,101 @@ class TestDecisionBriefSchema(unittest.TestCase):
             self.assertIn(field, report, msg=f"#4 blocked レポートに必須フィールド '{field}' が存在しない")
 
     # ------------------------------------------------------------------
+    # existence_analysis （生存構造倫理3問分析）の検証
+    # ------------------------------------------------------------------
+
+    def test_ok_report_existence_analysis_structure(self):
+        # existence_analysis が必須キーを全て持つこと
+        report = self._ok_report()
+        self.assertIn("existence_analysis", report)
+        ea = report["existence_analysis"]
+        for key in ["question_1_beneficiaries", "question_2_affected_structures",
+                    "question_3_judgment", "distortion_risk", "judgment_text"]:
+            self.assertIn(key, ea, msg=f"existence_analysis に '{key}' が存在しない")
+
+    def test_ok_report_existence_analysis_judgment_in_enum(self):
+        # judgment の値がスキーマの enum 内であること
+        valid_judgments = {"lifecycle", "self_interested_destruction", "unclear"}
+        report = self._ok_report()
+        judgment = report["existence_analysis"]["question_3_judgment"]
+        self.assertIn(judgment, valid_judgments)
+
+    def test_ok_report_existence_analysis_risk_in_enum(self):
+        # distortion_risk の値がスキーマの enum 内であること
+        valid_risks = {"low", "medium", "high"}
+        report = self._ok_report()
+        risk = report["existence_analysis"]["distortion_risk"]
+        self.assertIn(risk, valid_risks)
+
+    def test_existence_analysis_uses_input_beneficiaries(self):
+        # beneficiaries を指定したとき、existence_analysis に反映されること
+        report = build_decision_report({
+            "situation": "チーム体制を決めたい",
+            "constraints": [],
+            "options": ["案A", "案B", "案C"],
+            "beneficiaries": ["開発チーム", "エンドユーザー"],
+        })
+        self.assertEqual("ok", report["status"])
+        ea = report["existence_analysis"]
+        self.assertIn("開発チーム", ea["question_1_beneficiaries"])
+        self.assertIn("エンドユーザー", ea["question_1_beneficiaries"])
+
+    def test_existence_analysis_uses_input_affected_structures(self):
+        # affected_structures を指定したとき、existence_analysis に反映されること
+        report = build_decision_report({
+            "situation": "方針を決めたい",
+            "constraints": [],
+            "options": ["案A", "案B", "案C"],
+            "affected_structures": ["社会", "生態"],
+        })
+        self.assertEqual("ok", report["status"])
+        ea = report["existence_analysis"]
+        self.assertIn("社会", ea["question_2_affected_structures"])
+        self.assertIn("生態", ea["question_2_affected_structures"])
+
+    def test_existence_analysis_detects_destruction_keyword(self):
+        # 破壊系キーワードを含む場合、judgment が self_interested_destruction か高リスクになること
+        report = build_decision_report({
+            "situation": "競合を潰す方針を決めたい",
+            "constraints": [],
+            "options": ["案A", "案B", "案C"],
+        })
+        self.assertEqual("ok", report["status"])
+        ea = report["existence_analysis"]
+        self.assertEqual("self_interested_destruction", ea["question_3_judgment"])
+        self.assertEqual("high", ea["distortion_risk"])
+
+    def test_existence_analysis_detects_lifecycle_keyword(self):
+        # ライフサイクル系キーワードを含む場合、judgment が lifecycle になること
+        report = build_decision_report({
+            "situation": "サービス終了の移行方針を決めたい",
+            "constraints": [],
+            "options": ["案A", "案B", "案C"],
+        })
+        self.assertEqual("ok", report["status"])
+        ea = report["existence_analysis"]
+        self.assertEqual("lifecycle", ea["question_3_judgment"])
+        self.assertEqual("low", ea["distortion_risk"])
+
+    def test_existence_analysis_no_keywords_is_low_risk(self):
+        # 特定キーワードなし → unclear / low リスク
+        report = self._ok_report()
+        ea = report["existence_analysis"]
+        self.assertEqual("unclear", ea["question_3_judgment"])
+        self.assertEqual("low", ea["distortion_risk"])
+
+    def test_existence_analysis_autodetects_structure_from_text(self):
+        # テキストから生存構造が自動検出されること
+        report = build_decision_report({
+            "situation": "環境への影響を考慮した選択をしたい",
+            "constraints": [],
+            "options": ["案A", "案B", "案C"],
+        })
+        self.assertEqual("ok", report["status"])
+        ea = report["existence_analysis"]
+        self.assertIn("生態", ea["question_2_affected_structures"])
+
+    # ------------------------------------------------------------------
     # DECISION_REQUEST_V0 スキーマ構造の整合確認
     # ------------------------------------------------------------------
 
@@ -204,6 +299,32 @@ class TestDecisionBriefSchema(unittest.TestCase):
         for f, v in DECISION_REQUEST_V0["fields"].items():
             if v.get("required", False):
                 self.assertIn(f, allowed, msg=f"required フィールド '{f}' が allowed_fields に存在しない")
+
+    def test_request_schema_allows_beneficiaries(self):
+        # beneficiaries が allowed_fields に含まれていること
+        allowed = set(DECISION_REQUEST_V0["allowed_fields"])
+        self.assertIn("beneficiaries", allowed)
+
+    def test_request_schema_allows_affected_structures(self):
+        # affected_structures が allowed_fields に含まれていること
+        allowed = set(DECISION_REQUEST_V0["allowed_fields"])
+        self.assertIn("affected_structures", allowed)
+
+    def test_validate_accepts_beneficiaries(self):
+        # beneficiaries を含む入力がバリデーションを通過すること
+        from aicw import validate_request
+        errors = validate_request({
+            "situation": "テスト",
+            "beneficiaries": ["チームA", "顧客"],
+            "affected_structures": ["個人", "社会"],
+        })
+        self.assertEqual([], errors)
+
+    def test_validate_rejects_wrong_type_beneficiaries(self):
+        # beneficiaries が文字列（リストでない）のときエラーになること
+        from aicw import validate_request
+        errors = validate_request({"situation": "テスト", "beneficiaries": "チームA"})
+        self.assertTrue(any("beneficiaries" in e for e in errors))
 
 
 if __name__ == "__main__":

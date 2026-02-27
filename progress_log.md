@@ -1,6 +1,50 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-02-27 (session 3)
+
+### Goal
+- Existence Ethics Principle（生存構造倫理原則）をコアに組み込む
+  - C: guideline.md に原則を定義
+  - A: 入力フォーマットに beneficiaries / affected_structures を追加
+  - B: decision.py に existence_analysis（3問分析）を実装
+
+### Done
+- `guideline.md`:
+  - Project Goal を「倫理を軸に持つLLMとは異なるAIを作る」に更新
+  - `Existence Ethics Principle` セクションを新設（歪みの定義 / 5層構造 / 3つの問い / No-Goとの関係）
+  - Core Principles に `Existence-preserving` を追加
+  - Current Next Actions を更新（完了済みチェック + 新P2タスク追加）
+  - Input JSON format に beneficiaries / affected_structures を追記
+- `aicw/schema.py`:
+  - `DECISION_REQUEST_V0.allowed_fields` に `beneficiaries` / `affected_structures` を追加
+  - `DECISION_REQUEST_V0.fields` に両フィールドの定義を追加
+  - `DECISION_BRIEF_V0.fields` に `existence_analysis`（required_if: status == ok）を追加
+  - `validate_request()` に beneficiaries / affected_structures の型チェックを追加
+  - `_TYPO_HINTS` にタイポヒントを追加
+- `aicw/decision.py`:
+  - 生存構造5層キーワード辞書 `_EXISTENCE_STRUCTURE_KEYWORDS` を定義
+  - 私益による破壊キーワード `_DESTRUCTION_KEYWORDS` を定義
+  - 自然なライフサイクルキーワード `_LIFECYCLE_KEYWORDS` を定義
+  - `_analyze_existence()` 関数を実装（3問 → judgment/distortion_risk/judgment_text）
+  - `build_decision_report()`: beneficiaries / affected_structures を受け取り existence_analysis を出力に追加
+  - `format_report()`: [Existence Analysis] セクションを追加
+- `tests/test_schema_integrity.py`: 13ケース追加（existence_analysis の構造・enum・受益者入力・構造入力・キーワード検出）
+- 全 159 テスト PASS
+
+### Decisions
+- 生存構造原則は「フィルター」ではなく「推論の核（エンジン）」として定義
+- judgment は lifecycle / self_interested_destruction / unclear の3値
+- beneficiaries / affected_structures は任意入力（未指定時は自動検出 or 不明表示）
+- 私益による破壊キーワードと自然なライフサイクルキーワードを分離して判定
+
+### Next
+- P2: 5層構造キーワードの拡充（自動検出精度を上げる）
+- P2: 私益による破壊パターンの検出強化
+- P2: existence_analysis の判定をより多くのシナリオでテスト検証
+
+---
+
 ## 2026-02-27 (session 2)
 
 ### Goal

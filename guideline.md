@@ -1,9 +1,41 @@
 # Guideline（AI-Can-we-create-AI-）
 
 ## Project Goal
-- 最終目的: Po_core に取り込める「意思決定支援AI」に近づける
+- 最終目的: **倫理を軸に持つ、LLMとは異なるAIを作る**（Po_coreのような哲学駆動型AIの自作）
 - 人間が最終判断、AIは「根拠・反証・不確実性・外部性」を構造化して提示する
+- 推論の核: **「全ての生存構造に歪みを与えない」**（下記 Existence Ethics Principle 参照）
 - 対象: チーム内（非公開）／ローカルPC（オフライン優先）
+
+## Existence Ethics Principle（生存構造倫理原則）
+> **全ての生存構造に歪みを与えない。**
+> ただし自然なライフサイクル（生命の循環）はOK。
+
+### 歪みの定義
+- **NG**: 私益のために、他の生存構造を破壊すること
+- **OK**: 自然なライフサイクル（企業の終焉・世代交代・自然変化など）
+
+### 生存構造の5層
+| 層 | 例 |
+|----|-----|
+| 個人 | 健康・自律・尊厳・プライバシー |
+| 関係 | 信頼・家族・コミュニティ |
+| 社会 | 制度・公平・多様性 |
+| 認知 | 自分で考える力・操られない自由 |
+| 生態 | 環境・持続可能性 |
+
+### 3つの問い（推論の核）
+推奨を生成するとき、必ず答える：
+1. **受益者は誰か？**（この選択で得をするのは誰？）
+2. **影響を受ける構造は何か？**（何の「存在を続ける仕組み」に触れる？）
+3. **それは自然な循環か、私益による破壊か？**
+
+### No-Go との関係
+No-Go (#3/#4/#6) はこの原則の**派生**：
+- #6 Privacy → 個人の存在構造を守る
+- #3 差別禁止 → 社会の存在構造を守る
+- #4 操作禁止 → 認知の存在構造を守る
+
+---
 
 ## Non-negotiables (No-Go)
 - Privacy breach is forbidden (#6).
@@ -18,6 +50,7 @@
 - Status-invariant: 肩書・権威で結論を変えない
 - Context-dependent: 条件・制約・状況で結論を変える
 - Explainable selection: 候補案と選定理由を必ず示す
+- **Existence-preserving**: 推奨の根拠は常に「生存構造への歪みがない理由」を含む
 
 ## Security Defaults
 - Offline-first（外部ネットワーク/外部APIはデフォルト禁止）
@@ -71,8 +104,14 @@
 - [x] D: scripts/validate_request.py（JSON バリデータ）を追加
 - [x] P0: DLP の IP_LIKE を warn 化（バージョン文字列の誤検知をブロックしない）
 - [x] P1: aicw/schema.py で入出力スキーマを定義（validate_request.py はスキーマから委譲）
-- [ ] P1: decision_brief の出力スキーマをテストで検証する（schema vs 実際の出力の整合確認）
-- [ ] P1: POSTAL_CODE_LIKE の warn 化を検討（文脈次第で誤検知あり）
+- [x] P1: decision_brief の出力スキーマをテストで検証する（schema vs 実際の出力の整合確認）
+- [x] P1: POSTAL_CODE_LIKE の warn 化（文脈次第で誤検知あり）
+- [x] Existence Ethics Principle を guideline.md・schema.py に定義
+- [x] 入力フォーマットに beneficiaries / affected_structures を追加（A）
+- [x] decision.py に existence_analysis（3問分析）を実装（B）
+- [ ] P2: 5層構造キーワードの拡充（生存構造の自動検出精度を上げる）
+- [ ] P2: 私益による破壊パターンの検出強化（No-Go #5 相当）
+- [ ] P2: existence_analysis の判定をテストで検証する
 
 ## How to run / test
 
@@ -94,11 +133,14 @@ python run_demo.py
 ### Input JSON format
 ```json
 {
-  “situation”:   “何を決めたいか（必須）”,
-  “constraints”: [“制約1”, “制約2”],
-  “options”:     [“候補A”, “候補B”, “候補C”]
+  “situation”:            “何を決めたいか（必須）”,
+  “constraints”:          [“制約1”, “制約2”],
+  “options”:              [“候補A”, “候補B”, “候補C”],
+  “beneficiaries”:        [“受益者1”, “受益者2”],
+  “affected_structures”:  [“個人”, “社会”]
 }
 ```
+※ `beneficiaries` / `affected_structures` は任意。指定すると existence_analysis の精度が上がる。
 
 ### Exit codes（scripts/brief.py）
 - `0`: ok（正常出力）

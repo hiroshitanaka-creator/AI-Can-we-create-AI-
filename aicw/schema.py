@@ -2,12 +2,13 @@
 aicw/schema.py
 
 decision_request / decision_brief の入出力スキーマ定義。
-Po_core への移植、validate_request.py、テストから共通参照する。
+validate_request.py、テストから共通参照する。
 
 設計方針:
   - 外部ライブラリ不使用（Python 標準のみ）
   - スキーマ定義は dict で保持（ドキュメント + バリデーション兼用）
   - validate_request() を呼べば errors: List[str] が返る
+  - 推論の核: Existence Ethics Principle（生存構造倫理原則）
 """
 
 from __future__ import annotations
@@ -21,7 +22,8 @@ from typing import Any, Dict, List
 DECISION_REQUEST_V0: Dict[str, Any] = {
     "$id": "decision_request.v0",
     "description": "意思決定支援AIへの入力フォーマット",
-    "allowed_fields": ["situation", "constraints", "options", "asker_status"],
+    "allowed_fields": ["situation", "constraints", "options", "asker_status",
+                        "beneficiaries", "affected_structures"],
     "fields": {
         "situation": {
             "type": "str",
@@ -42,6 +44,16 @@ DECISION_REQUEST_V0: Dict[str, Any] = {
             "type": "str",
             "required": False,
             "description": "依頼者の肩書（結論に使用しない。#3対策）",
+        },
+        "beneficiaries": {
+            "type": "list[str]",
+            "required": False,
+            "description": "受益者リスト（この決定で得をする関係者）。existence_analysis の精度向上に使用。",
+        },
+        "affected_structures": {
+            "type": "list[str]",
+            "required": False,
+            "description": "影響を受ける生存構造（個人/関係/社会/認知/生態）。existence_analysis の精度向上に使用。",
         },
     },
 }
@@ -92,6 +104,22 @@ DECISION_BRIEF_V0: Dict[str, Any] = {
         "uncertainties":    {"type": "list[str]", "required_if": "status == ok"},
         "externalities":    {"type": "list[str]", "required_if": "status == ok"},
         "next_questions":   {"type": "list[str]", "required_if": "status == ok"},
+        "existence_analysis": {
+            "type": "dict",
+            "required_if": "status == ok",
+            "description": "生存構造倫理原則に基づく3問分析",
+            "item_fields": {
+                "question_1_beneficiaries":      {"type": "list[str]", "description": "受益者は誰か"},
+                "question_2_affected_structures": {"type": "list[str]", "description": "影響を受ける構造は何か"},
+                "question_3_judgment": {
+                    "type": "str",
+                    "enum": ["lifecycle", "self_interested_destruction", "unclear"],
+                    "description": "自然な循環か、私益による破壊か",
+                },
+                "distortion_risk":  {"type": "str",  "enum": ["low", "medium", "high"]},
+                "judgment_text":    {"type": "str",  "description": "判定の根拠説明"},
+            },
+        },
         "warnings": {
             "type": "list[str]",
             "required": False,
@@ -105,7 +133,7 @@ DECISION_BRIEF_V0: Dict[str, Any] = {
         "redacted_preview":  {"type": "str",       "required": False,
                               "description": "#6 Privacy blocked 時のみ"},
     },
-    # --- reason code 一覧（Po_core 移植時の契約） ---
+    # --- reason code 一覧 ---
     "reason_codes": {
         "description": "selection.reason_codes / not_selected_reason_code で使用するコード",
         "selection": {
@@ -140,14 +168,18 @@ _ALLOWED_FIELDS = set(DECISION_REQUEST_V0["allowed_fields"])
 
 # タイポしやすいフィールド名のヒント
 _TYPO_HINTS: Dict[str, str] = {
-    "constrint":   "constraints",
-    "contraint":   "constraints",
-    "constrains":  "constraints",
-    "constrants":  "constraints",
-    "option":      "options",
-    "optins":      "options",
-    "situaton":    "situation",
-    "sitiation":   "situation",
+    "constrint":          "constraints",
+    "contraint":          "constraints",
+    "constrains":         "constraints",
+    "constrants":         "constraints",
+    "option":             "options",
+    "optins":             "options",
+    "situaton":           "situation",
+    "sitiation":          "situation",
+    "beneficiary":        "beneficiaries",
+    "benficiaries":       "beneficiaries",
+    "affected_structure": "affected_structures",
+    "affect_structures":  "affected_structures",
 }
 
 
@@ -173,6 +205,10 @@ def validate_request(data: Any) -> List[str]:
         errors.append(f"'constraints' はリスト型が必要です（現在: {type(data['constraints']).__name__}）")
     if "options" in data and not isinstance(data["options"], list):
         errors.append(f"'options' はリスト型が必要です（現在: {type(data['options']).__name__}）")
+    if "beneficiaries" in data and not isinstance(data["beneficiaries"], list):
+        errors.append(f"'beneficiaries' はリスト型が必要です（現在: {type(data['beneficiaries']).__name__}）")
+    if "affected_structures" in data and not isinstance(data["affected_structures"], list):
+        errors.append(f"'affected_structures' はリスト型が必要です（現在: {type(data['affected_structures']).__name__}）")
 
     # 不明フィールド（タイポ検出）
     unknown = set(data.keys()) - _ALLOWED_FIELDS
