@@ -6,7 +6,7 @@ from aicw.safety import guard_text
 class TestP0Privacy(unittest.TestCase):
     def test_blocks_email_like(self):
         # 文字列を分割して組み立てる（ソースに直接それっぽい形を残しにくくする）
-        s = "x" + "@" + "y" + "." + "z"
+        s = "x" + "@" + "y" + "." + "co"
         text = "contact: " + s
         allowed, redacted, findings = guard_text(text)
         self.assertFalse(allowed)
