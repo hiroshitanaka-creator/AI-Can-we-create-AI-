@@ -63,13 +63,39 @@
 - User: 最終決定（Yes/Noで答えられる形）
 
 ## Current Next Actions
-- [ ] Decision Brief の入出力（JSON/Markdown）を最小で確定（Po_core取り込み前提）
-- [ ] aicw/ と tests/ の現状を把握（ファイル一覧＋run_demo.py確認）
-- [ ] P0: DLP（機密検知）テスト設計＋実装（まず“検知して止まる”でOK）
-- [ ] P0: 地位差分テスト（肩書だけ変える）まず10ケース→100ケースへ
-- [ ] P0: 操作表現検知＋縮退モード（説得/煽りを避ける）
-- [ ] P1: 意思決定テンプレCLI（入力→Decision Brief出力）
+- [x] Decision Brief の入出力（JSON/Markdown）を最小で確定 → scripts/brief.py
+- [x] aicw/ と tests/ の現状把握
+- [x] P0: 地位差分テスト10ケース（安全重視/スピード重視/バランス × 多様な肩書ペア）
+- [ ] P0: DLP テスト設計の拡充（過検知・漏れのケースを追加）
+- [ ] P0: 操作表現検知の閾値と縮退挙動を調整する
 
 ## How to run / test
-- （まだコードが無い/確定していないのでTBD）
-- 追加したらここに「1コマンドで動く手順」を書く
+
+```bash
+# テスト（全件）
+python -m unittest discover -s tests -v
+
+# Decision Brief CLI（JSON stdin）
+echo '{“situation”:”...”,”constraints”:[“安全”],”options”:[“案A”,”案B”,”案C”]}' \
+  | python scripts/brief.py
+
+# Decision Brief CLI（JSONファイル）
+python scripts/brief.py path/to/request.json
+
+# 対話デモ
+python run_demo.py
+```
+
+### Input JSON format
+```json
+{
+  “situation”:   “何を決めたいか（必須）”,
+  “constraints”: [“制約1”, “制約2”],
+  “options”:     [“候補A”, “候補B”, “候補C”]
+}
+```
+
+### Exit codes（scripts/brief.py）
+- `0`: ok（正常出力）
+- `1`: blocked（#4 or #6 で停止）
+- `2`: 引数エラー / 不正JSON
