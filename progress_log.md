@@ -1,6 +1,39 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-02-27 (session 2)
+
+### Goal
+- P0: DLP の IP_LIKE を warn 化（バージョン文字列の過検知を解消）
+- P1: 入出力スキーマを aicw/schema.py に固定化（Po_core 取り込み前提）
+
+### Done
+- `aicw/safety.py`:
+  - `_BLOCK_PATTERNS` → `_PRIVACY_PATTERNS` に名称変更し、各エントリに `severity` フィールドを追加
+  - `IP_LIKE` を `severity="warn"` に変更（バージョン文字列等の誤検知が多いため）
+  - `guard_text`: block 検知がなければ allowed=True。redact は block のみ対象。全 findings を返却
+- `aicw/decision.py`:
+  - DLP warn findings を report["warnings"] に DLP 警告として追記
+  - manipulation warn + DLP warn を all_warnings にまとめて格納
+- `aicw/schema.py`（新規）:
+  - DECISION_REQUEST_V0 / DECISION_BRIEF_V0 をスキーマ dict で定義
+  - validate_request() 関数を実装（標準ライブラリのみ）
+  - reason_code 一覧を Po_core 向けの"契約"として記録
+- `aicw/__init__.py`: schema のエクスポートを追加
+- `scripts/validate_request.py`: ロジックを aicw.schema に委譲（CLI ラッパーのみに）
+- `tests/test_p0_privacy.py`:
+  - test_warns_ip_like / test_ip_like_creates_dlp_warning_in_report / test_version_string_warns_not_blocks 追加
+- 全 123 テスト PASS
+
+### Decisions
+- IP_LIKE は warn 化。POSTAL_CODE_LIKE は引き続き block（次セッションで再検討）
+- スキーマは Python dict で管理（jsonschema 等の依存なし）
+
+### Next
+- P1: decision_brief の出力が schema と整合しているかテストで検証
+- P1: POSTAL_CODE_LIKE の warn 化を検討
+- Po_core への移植タイミングの検討
+
 ## 2026-02-27
 
 ### Goal

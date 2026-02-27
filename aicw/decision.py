@@ -83,8 +83,11 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
     # --- No-Go #6: privacy guard ---
     blob = "\n".join([situation] + constraints + options)
     allowed, redacted_blob, findings = guard_text(blob)
+    block_dlp = [f for f in findings if f.severity == "block"]
+    warn_dlp = [f for f in findings if f.severity == "warn"]
+
     if not allowed:
-        detected = sorted({f.kind for f in findings})
+        detected = sorted({f.kind for f in block_dlp})
         return {
             "status": "blocked",
             "blocked_by": "#6 Privacy",
@@ -164,11 +167,14 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
             ],
         }
 
-    if warn_hits:
-        report["warnings"] = [
-            f"注意: 出力に断定的な表現が含まれています → 「{h.phrase}」"
-            for h in warn_hits
-        ]
+    # DLP warn + manipulation warn をまとめて warnings フィールドに追加
+    all_warnings: List[str] = []
+    for f in warn_dlp:
+        all_warnings.append(f"DLP注意[{f.kind}]: {f.message}")
+    for h in warn_hits:
+        all_warnings.append(f"注意: 出力に断定的な表現が含まれています → 「{h.phrase}」")
+    if all_warnings:
+        report["warnings"] = all_warnings
 
     return report
 

@@ -2,6 +2,9 @@
 """
 Decision Request JSON バリデータ
 
+バリデーションロジックは aicw/schema.py に集約。
+このスクリプトは CLI ラッパーのみ。
+
 Usage:
   python scripts/validate_request.py request.json
   echo '{"situation":"..."}' | python scripts/validate_request.py
@@ -17,57 +20,13 @@ from __future__ import annotations
 import json
 import os
 import sys
-from typing import Dict, Any, List
+from typing import Any, List
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from aicw.schema import validate_request
+
 _USAGE = "usage: python scripts/validate_request.py [request.json]  (or pipe JSON to stdin)"
-
-REQUIRED_FIELDS = {"situation"}
-ALLOWED_FIELDS = {"situation", "constraints", "options", "asker_status"}
-
-# タイポしやすいフィールド名のヒント
-_TYPO_HINTS: Dict[str, str] = {
-    "constrint":   "constraints",
-    "contraint":   "constraints",
-    "constrains":  "constraints",
-    "constrants":  "constraints",
-    "option":      "options",
-    "optins":      "options",
-    "situaton":    "situation",
-    "sitiation":   "situation",
-}
-
-
-def validate(data: Any) -> List[str]:
-    errors: List[str] = []
-
-    if not isinstance(data, dict):
-        return ["トップレベルはオブジェクト（{}）である必要があります"]
-
-    # 必須フィールド
-    for f in sorted(REQUIRED_FIELDS):
-        if f not in data:
-            errors.append(f"必須フィールドが不足: '{f}'")
-
-    # 型チェック
-    if "situation" in data and not isinstance(data["situation"], str):
-        errors.append(f"'situation' は文字列型が必要です（現在: {type(data['situation']).__name__}）")
-    if "constraints" in data and not isinstance(data["constraints"], list):
-        errors.append(f"'constraints' はリスト型が必要です（現在: {type(data['constraints']).__name__}）")
-    if "options" in data and not isinstance(data["options"], list):
-        errors.append(f"'options' はリスト型が必要です（現在: {type(data['options']).__name__}）")
-
-    # 不明フィールド（タイポ検出）
-    unknown = set(data.keys()) - ALLOWED_FIELDS
-    for u in sorted(unknown):
-        hint = _TYPO_HINTS.get(u)
-        if hint:
-            errors.append(f"不明なフィールド: '{u}' → もしかして '{hint}' ?")
-        else:
-            errors.append(f"不明なフィールド: '{u}'（使用可能: {sorted(ALLOWED_FIELDS)}）")
-
-    return errors
 
 
 def _load(argv: List[str]) -> Any:
@@ -95,7 +54,7 @@ def _load(argv: List[str]) -> Any:
 
 def main() -> None:
     data = _load(sys.argv)
-    errors = validate(data)
+    errors = validate_request(data)
     if errors:
         print("INVALID:")
         for e in errors:

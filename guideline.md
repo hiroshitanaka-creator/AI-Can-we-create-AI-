@@ -69,8 +69,10 @@
 - [x] P0: DLP テスト設計の拡充（過検知・漏れのケース）→ 16ケース
 - [x] P0: 操作表現検知を warn/block 2段階化 + 落選理由コードを細分化
 - [x] D: scripts/validate_request.py（JSON バリデータ）を追加
-- [ ] P0: DLP の過検知を warn 化（バージョン文字列の IP_LIKE など）
-- [ ] P1: Po_core 取り込みに向けた入出力スキーマの固定化
+- [x] P0: DLP の IP_LIKE を warn 化（バージョン文字列の誤検知をブロックしない）
+- [x] P1: aicw/schema.py で入出力スキーマを定義（validate_request.py はスキーマから委譲）
+- [ ] P1: decision_brief の出力スキーマをテストで検証する（schema vs 実際の出力の整合確認）
+- [ ] P1: POSTAL_CODE_LIKE の warn 化を検討（文脈次第で誤検知あり）
 
 ## How to run / test
 
