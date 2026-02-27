@@ -13,23 +13,51 @@ def _as_list(x: Any) -> List[str]:
     return [str(x)]
 
 
+# 制約キーワード → reason code のマッピング
+_SAFETY_WORD_CODES: Dict[str, str] = {
+    "安全": "SAFETY_FIRST",
+    "リスク": "RISK_AVOIDANCE",
+    "事故": "SAFETY_FIRST",
+    "法令": "COMPLIANCE_FIRST",
+    "コンプラ": "COMPLIANCE_FIRST",
+    "品質": "QUALITY_FIRST",
+}
+_SPEED_WORD_CODES: Dict[str, str] = {
+    "スピード": "SPEED_FIRST",
+    "期限": "DEADLINE_DRIVEN",
+    "至急": "URGENCY_FIRST",
+    "早く": "SPEED_FIRST",
+    "納期": "DEADLINE_DRIVEN",
+}
+
+# 推奨案ごとの「落選理由コード」
+# _NOT_SELECTED[推奨ID][非推奨ID] = reason_code
+_NOT_SELECTED_CODES: Dict[str, Dict[str, str]] = {
+    "A": {"B": "LESS_SAFE_THAN_A",      "C": "LEAST_SAFE_OPTION"},
+    "B": {"A": "OVERLY_CONSERVATIVE",   "C": "OVERLY_AGGRESSIVE"},
+    "C": {"A": "SLOWEST_OPTION",         "B": "LESS_FAST_THAN_C"},
+}
+
+
 def _choose_recommendation(constraints_text: str) -> Tuple[str, List[str], str]:
     """
     P0: 超単純なルール。
-    - 安全/リスク系 → A
-    - スピード/期限系 → C
-    - それ以外 → B
+    - 安全/リスク系 → A  (reason codes: SAFETY_FIRST / RISK_AVOIDANCE / COMPLIANCE_FIRST / QUALITY_FIRST)
+    - スピード/期限系 → C (reason codes: SPEED_FIRST / DEADLINE_DRIVEN / URGENCY_FIRST)
+    - それ以外 → B       (reason codes: NO_CONSTRAINTS)
     """
     t = constraints_text or ""
 
-    safety_words = ["安全", "リスク", "事故", "法令", "コンプラ", "品質"]
-    speed_words = ["スピード", "期限", "至急", "早く", "納期"]
+    safety_codes = sorted({v for k, v in _SAFETY_WORD_CODES.items() if k in t})
+    speed_codes = sorted({v for k, v in _SPEED_WORD_CODES.items() if k in t})
 
-    if any(w in t for w in safety_words):
-        return "A", ["SAFETY_FIRST"], "制約に安全/リスク系があるため、A（安全側）を仮推奨。"
-    if any(w in t for w in speed_words):
-        return "C", ["SPEED_FIRST"], "制約に期限/速度系があるため、C（速度側）を仮推奨。"
-    return "B", ["DEFAULT_BALANCED"], "制約が限定的なので、B（バランス）を仮推奨。"
+    if safety_codes:
+        label = ", ".join(safety_codes)
+        return "A", safety_codes, f"制約に安全/リスク系({label})があるため、A（安全側）を仮推奨。"
+    if speed_codes:
+        label = ", ".join(speed_codes)
+        return "C", speed_codes, f"制約に期限/速度系({label})があるため、C（速度側）を仮推奨。"
+    return "B", ["NO_CONSTRAINTS"], "制約が限定的なので、B（バランス）を仮推奨。"
 
 
 def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
@@ -74,9 +102,10 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
     rec_id, reason_codes, explanation = _choose_recommendation(constraints_text)
 
     candidates = [
-        {"id": "A", "summary": options[0], "not_selected_reason_code": "N/A" if rec_id == "A" else "NOT_RECOMMENDED_P0"},
-        {"id": "B", "summary": options[1], "not_selected_reason_code": "N/A" if rec_id == "B" else "NOT_RECOMMENDED_P0"},
-        {"id": "C", "summary": options[2], "not_selected_reason_code": "N/A" if rec_id == "C" else "NOT_RECOMMENDED_P0"},
+        {"id": cid, "summary": options[i], "not_selected_reason_code": (
+            "N/A" if rec_id == cid else _NOT_SELECTED_CODES[rec_id][cid]
+        )}
+        for i, cid in enumerate(["A", "B", "C"])
     ]
 
     report: Dict[str, Any] = {
@@ -120,17 +149,26 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
     # --- No-Go #4: anti-manipulation guard (output) ---
     rendered = format_report(report)
     hits = scan_manipulation(rendered)
-    if hits:
+    block_hits = [h for h in hits if h.severity == "block"]
+    warn_hits = [h for h in hits if h.severity == "warn"]
+
+    if block_hits:
         return {
             "status": "blocked",
             "blocked_by": "#4 Manipulation",
             "reason": "出力に操作/扇動っぽい表現が混ざる可能性があるため停止します。",
-            "detected": hits,
+            "detected": [h.phrase for h in block_hits],
             "safe_alternatives": [
                 "表現を中立に落として再生成する（P0では手動で修正）",
                 "結論を出さず、候補と比較ポイントだけ提示する",
             ],
         }
+
+    if warn_hits:
+        report["warnings"] = [
+            f"注意: 出力に断定的な表現が含まれています → 「{h.phrase}」"
+            for h in warn_hits
+        ]
 
     return report
 
@@ -193,5 +231,12 @@ def format_report(report: Dict[str, Any]) -> str:
     lines.append("[Next Questions]")
     for x in report["next_questions"]:
         lines.append(f"- {x}")
+
+    warnings = report.get("warnings") or []
+    if warnings:
+        lines.append("")
+        lines.append("[Warnings]")
+        for w in warnings:
+            lines.append(f"- {w}")
 
     return "\n".join(lines)
