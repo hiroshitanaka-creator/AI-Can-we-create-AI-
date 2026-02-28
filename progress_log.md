@@ -1,6 +1,125 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-02-28 (session 8 — uncertainties + counterarguments の動的化)
+
+### Goal
+- `uncertainties` を existence_analysis に応じて動的生成
+- `counterarguments` を existence_analysis に応じて動的生成
+
+### Done
+- `aicw/decision.py`:
+  - `_build_uncertainties(existence_analysis, constraints)`: 最大 5 件を動的生成
+    - 常時: 成功の定義
+    - 受益者不明 → 利害の不確実性
+    - 構造不明 → 外部性見積もり不足 / 構造既知 → 失敗した場合の被害
+    - distortion_risk=medium → 歪みリスク中程度の不確実性
+    - impact_score >= 4 → 複数層の外部性
+    - 制約なし → 基準未確定
+  - `_build_counterarguments(existence_analysis)`: 最大 4 件を動的生成
+    - 常時: 前提が足りない
+    - 受益者不明 → 意図しない損者リスク
+    - 構造不明 → 外部性の反論 / 構造既知 → 短期最適化の反論
+    - distortion_risk=medium → 誰の私益か（優先）
+    - judgment=lifecycle → 移行への配慮（次優先）
+    - impact_score >= 4 → 段階的実施（その次）
+  - `build_decision_report()`: static を両関数で置換
+- `tests/test_p0_dynamic.py`: TestDynamicUncertainties (15件) + TestDynamicCounterarguments (13件) 追加
+
+### Test Results
+- 304 tests PASS (276 → 304, +28)
+
+---
+
+## 2026-02-28 (session 7 — 動的 next_questions + blocked 代替案の具体化)
+
+### Goal
+- A: `next_questions` を existence_analysis 結果に応じて動的生成
+- B: No-Go #5 blocked 時の `safe_alternatives` をキーワード固有に具体化
+
+### Done
+- `aicw/decision.py`:
+  - `_DESTRUCTION_ALTERNATIVES`: HARD/SOFT 全キーワード（23件）→ 再フレーミング提案の辞書
+  - `_EXISTENCE_ALTERNATIVES_STANDARD`: 標準代替案 3 件（定数化）
+  - `_build_existence_alternatives(detected_kws)`: 先頭 2 件のキーワード固有提案 + 標準 3 件
+  - `_build_next_questions(existence_analysis, constraints)`: 最大 6 件を動的生成
+    - 常時: 成功の定義 / 最悪シナリオ
+    - 受益者不明 → 受益者を尋ねる
+    - 構造不明 → 構造を尋ねる / 構造既知 → チーム外への影響を尋ねる
+    - distortion_risk == medium → 誰の私益か
+    - judgment == lifecycle → 移行支援計画
+    - impact_score >= 4 (且つ上記以外) → 緩和策
+    - 制約なし → 制約を明示するよう促す
+  - `build_decision_report()`: static を両関数で置換
+- `aicw/schema.py`: `next_questions` に description を追加
+- `tests/test_p0_dynamic.py`: 31 テスト新規作成 (TestDynamicNextQuestions 18件 / TestBlockedAlternatives 13件)
+
+### Test Results
+- 276 tests PASS (245 → 276, +31)
+
+---
+
+## 2026-02-28 (session 6 — SOFT拡張 + P3)
+
+### Goal
+- SOFT キーワード拡張（締め出す/封殺/黙らせる/抑え込む）+ HARD 追加 + SAFE_TARGET 追加
+- P3: 影響スコア（impact_score）の実装と推奨オーバーライド
+
+### Done
+- `aicw/decision.py`:
+  - HARD 追加: 排斥, 乗っ取る, 踏みにじる
+  - SOFT 追加: 締め出す, 封殺, 黙らせる, 抑え込む
+  - SAFE_TARGET 追加: 脅威, 感染, ノイズ, アラート
+  - P3: `_analyze_existence()` に `impact_score` を追加
+    計算式: min(構造層数 + {low:0, medium:3, high:5}[risk], 8)
+  - P3: impact_score >= 6 かつ rec_id != "A" → A に引き上げ + `EXISTENCE_IMPACT_OVERRIDE`
+  - `format_report()` に「影響スコア: X / 8」を追加
+- `aicw/schema.py`: EXISTENCE_IMPACT_OVERRIDE・impact_score を追加
+- `tests/test_p0_existence.py`:
+  - `TestSoftKeywordExpansion` 追加（12件）
+  - `TestP3_ImpactScore` 追加（14件）
+- 全 245 テスト PASS
+
+### Scoring (P3)
+impact_score = min(構造層数 + risk_bonus, 8) ／ threshold=6 で A にオーバーライド
+
+---
+
+## 2026-02-28 (session 5 — P2)
+
+### Goal
+- P2a: 破壊キーワードの精度向上（HARD/SOFT 2層 + SAFE_TARGET ホワイトリスト）
+- P2b: 5層構造キーワードの拡充
+
+### Done
+- `aicw/decision.py`:
+  - `_DESTRUCTION_KEYWORDS` を2層に分割:
+    - `_HARD_DESTRUCTION_KEYWORDS`: 文脈不問で常に破壊を示す語
+      （破壊, 潰す, つぶす, 蹴落とす, 独占, 支配, 奪う, 壊滅, 抹消, 消滅, 制圧）
+    - `_SOFT_DESTRUCTION_KEYWORDS`: 合法/正当なユースケースもある語
+      （排除, 封じる, 妨害, 阻止, 妨げる）
+  - `_SAFE_TARGET_KEYWORDS` 追加: SOFT と同テキストに存在する場合は破壊と見なさない
+    （リスク, 課題, 問題, バグ, エラー, 事故, 被害, 災害, 漏洩, 違反, 不正, 欠陥, 障害, ミス, 失敗）
+  - `_analyze_existence()` の Q3 判定ロジックを2層対応に更新
+  - バグ修正: `_analyze_existence` に `options_in`（ユーザー提供分のみ）を渡すよう変更
+    → デフォルト選択肢 "A: 安全側（失敗を減らす）" の "失敗" が SAFE_TARGET を汚染する問題を解消
+  - `_EXISTENCE_STRUCTURE_KEYWORDS` を拡充（P2b）:
+    - 個人: + 生活, 権利, 自己, 身体, 人権, 感情
+    - 関係: + 友人, 仲間, ユーザー, クライアント, メンバー, ステークホルダー, 住民
+    - 社会: + 雇用, 労働, 文化, 教育, 公共, インフラ, 経済
+    - 認知: + 知識, 学習, 記憶, 情報, 表現
+    - 生態: + 生命, 水, 土地, 気候, 廃棄, 循環
+- `tests/test_p0_existence.py`:
+  - `TestP2a_KeywordPrecision` 追加（20件）
+  - `TestP2b_StructureKeywordExpansion` 追加（14件）
+- 全 219 テスト PASS
+
+### Key Decision: options_in vs options for existence analysis
+- Q3 判定には「ユーザーが書いたテキスト」のみを使う
+- デフォルト補完後の `options` にはシステム語が混在するため `options_in` のみを渡す
+
+---
+
 ## 2026-02-27 (session 4)
 
 ### Goal

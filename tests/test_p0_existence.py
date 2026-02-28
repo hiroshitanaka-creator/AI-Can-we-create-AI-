@@ -4,6 +4,8 @@ tests/test_p0_existence.py
 No-Go #5 Existence Ethics のテスト。
 - B: 私益による破壊 → blocked (#5)
 - A: existence_analysis → selection.explanation / reason_codes に接続
+- P2a: 破壊キーワード2層化（HARD/SOFT + SAFE_TARGET）の精度テスト
+- P2b: 5層構造キーワード拡充の検出テスト
 """
 import unittest
 
@@ -199,6 +201,376 @@ class TestSchemaConsistency(unittest.TestCase):
         blocked_by_values = DECISION_BRIEF_V0["reason_codes"]["blocked_by_values"]
         for expected in ["#6 Privacy", "#5 Existence Ethics", "#4 Manipulation"]:
             self.assertIn(expected, blocked_by_values)
+
+
+class TestP2a_KeywordPrecision(unittest.TestCase):
+    """P2a: 破壊キーワード2層化の精度テスト"""
+
+    # ---- 偽陽性防止: SOFT + SAFE_TARGET → ok ----
+
+    def test_no_block_risk_haijo(self):
+        r = _ok("リスクを排除する手順を決めたい")
+        self.assertEqual("ok", r["status"], "リスクを排除するのは正当。block してはいけない")
+
+    def test_no_block_jiko_alshi(self):
+        r = _ok("事故を阻止するための安全対策を選ぶ")
+        self.assertEqual("ok", r["status"], "事故阻止は正当。block してはいけない")
+
+    def test_no_block_problem_haijo(self):
+        r = _ok("問題を排除するアプローチを決めたい")
+        self.assertEqual("ok", r["status"], "問題除去は正当。block してはいけない")
+
+    def test_no_block_roei_alshi(self):
+        r = _ok("情報漏洩を阻止するシステム設計を選ぶ")
+        self.assertEqual("ok", r["status"], "漏洩阻止は正当。block してはいけない")
+
+    def test_no_block_bug_haijo(self):
+        r = _ok("バグを排除するリファクタリング方針")
+        self.assertEqual("ok", r["status"], "バグ除去は正当。block してはいけない")
+
+    def test_no_block_shippai_alshi(self):
+        r = _ok("失敗を阻止するフェイルセーフ設計")
+        self.assertEqual("ok", r["status"], "失敗防止は正当。block してはいけない")
+
+    def test_no_block_saigai_alshi(self):
+        r = _ok("災害を阻止するための防災計画")
+        self.assertEqual("ok", r["status"], "災害阻止は正当。block してはいけない")
+
+    def test_no_block_fusei_haijo(self):
+        r = _ok("不正アクセスを排除するセキュリティ対策")
+        self.assertEqual("ok", r["status"], "不正排除は正当。block してはいけない")
+
+    # ---- 真陽性確認: SOFT + 非セーフ対象 → blocked ----
+
+    def test_block_soft_kyogo_alshi(self):
+        r = _ok("競合他社を阻止する施策を決めたい")
+        self.assertEqual("blocked", r["status"], "競合阻止は私益的破壊。block されるべき")
+        self.assertEqual("#5 Existence Ethics", r["blocked_by"])
+
+    def test_block_soft_iron_haijo(self):
+        r = _ok("異論を排除する組織運営を決めたい")
+        self.assertEqual("blocked", r["status"], "異論排除は生存構造の歪み。block されるべき")
+        self.assertEqual("#5 Existence Ethics", r["blocked_by"])
+
+    def test_block_soft_futashika_fuujiru(self):
+        r = _ok("不都合な意見を封じる方針を選ぶ")
+        self.assertEqual("blocked", r["status"], "意見封じは生存構造の歪み。block されるべき")
+        self.assertEqual("#5 Existence Ethics", r["blocked_by"])
+
+    def test_block_soft_hihan_fuujiru(self):
+        r = _ok("批判を封じる方法を決めたい")
+        self.assertEqual("blocked", r["status"], "批判封じは私益的行動。block されるべき")
+
+    # ---- HARD keywords: SAFE_TARGET があっても block ----
+
+    def test_block_hard_even_with_safe_target(self):
+        # HARD + SAFE_TARGET の組み合わせでも block されること
+        r = _ok("競合のリスクを破壊してビジネスを独占する")
+        self.assertEqual("blocked", r["status"], "HARD キーワードは SAFE_TARGET に関係なく block")
+
+    def test_block_hard_tsubusu(self):
+        r = _ok("競合を潰す戦略を決めたい")
+        self.assertEqual("blocked", r["status"])
+        self.assertEqual("#5 Existence Ethics", r["blocked_by"])
+
+    def test_block_hard_dokusen(self):
+        r = _ok("市場を独占する計画を立てたい")
+        self.assertEqual("blocked", r["status"])
+
+    def test_block_hard_hakai(self):
+        r = _ok("既存の仕組みを破壊して支配する")
+        self.assertEqual("blocked", r["status"])
+
+    def test_block_hard_seiatsu(self):
+        # P2a で追加: 制圧
+        r = _ok("反対勢力を制圧する方法を決めたい")
+        self.assertEqual("blocked", r["status"])
+
+    def test_block_hard_massho(self):
+        # P2a で追加: 抹消
+        r = _ok("競合の記録を抹消する作業を選ぶ")
+        self.assertEqual("blocked", r["status"])
+
+    # ---- SOFT + lifecycle 共存 → unclear (not blocked) ----
+
+    def test_soft_plus_lifecycle_is_unclear_not_blocked(self):
+        # 排除（SOFT）+ 終了（lifecycle）→ unclear + medium → ok
+        r = build_decision_report({
+            "situation": "サービス終了と不要機能の排除方針を決めたい",
+            "constraints": [],
+            "options": [],
+        })
+        self.assertEqual("ok", r["status"])
+        ea = r["existence_analysis"]
+        self.assertEqual("unclear", ea["question_3_judgment"])
+        self.assertEqual("medium", ea["distortion_risk"])
+
+    # ---- options_in のみ使用確認（デフォルト選択肢テキストで汚染されないこと） ----
+
+    def test_default_options_do_not_suppress_soft_block(self):
+        # デフォルト選択肢 "A: 安全側（失敗を減らす）" の "失敗" で SOFT 判定が
+        # whitelist されてはいけない
+        r = build_decision_report({
+            "situation": "異論を排除する体制を決めたい",
+            "constraints": [],
+            "options": [],  # ← options 未指定（デフォルト補完が起きる）
+        })
+        self.assertEqual("blocked", r["status"],
+            "デフォルトオプションの'失敗'が SAFE_TARGET として誤判定されてはいけない")
+
+
+class TestSoftKeywordExpansion(unittest.TestCase):
+    """P2c: 新 SOFT キーワード (締め出す/封殺/黙らせる/抑え込む) と
+            新 HARD キーワード (排斥/乗っ取る/踏みにじる) のテスト"""
+
+    # ---- 新 HARD: 文脈不問で block ----
+
+    def test_hard_haijo_block(self):
+        r = _ok("異民族を排斥する方針を決める")
+        self.assertEqual("blocked", r["status"])
+        self.assertEqual("#5 Existence Ethics", r["blocked_by"])
+
+    def test_hard_nottoru_block(self):
+        r = _ok("競合システムを乗っ取る計画を立てたい")
+        self.assertEqual("blocked", r["status"])
+
+    def test_hard_fumininijiru_block(self):
+        r = _ok("権利を踏みにじる契約を進めたい")
+        self.assertEqual("blocked", r["status"])
+
+    # ---- 新 SOFT: 非セーフ対象 → block ----
+
+    def test_soft_shime_block(self):
+        r = _ok("批判者を締め出す運営方針を選ぶ")
+        self.assertEqual("blocked", r["status"])
+
+    def test_soft_fuusa_block(self):
+        r = _ok("報道を封殺する方法を決めたい")
+        self.assertEqual("blocked", r["status"])
+
+    def test_soft_damara_block(self):
+        r = _ok("内部告発者を黙らせる仕組みを選ぶ")
+        self.assertEqual("blocked", r["status"])
+
+    def test_soft_osae_block(self):
+        r = _ok("反対意見を抑え込む組織体制を決める")
+        self.assertEqual("blocked", r["status"])
+
+    # ---- 新 SOFT + SAFE_TARGET → ok ----
+
+    def test_soft_shime_safe_noise(self):
+        r = _ok("ノイズを締め出すフィルタリング設計")
+        self.assertEqual("ok", r["status"])
+
+    def test_soft_fuusa_safe_threat(self):
+        r = _ok("脅威を封殺するためのセキュリティ戦略")
+        self.assertEqual("ok", r["status"])
+
+    def test_soft_damara_safe_alert(self):
+        r = _ok("誤検知アラートを黙らせる設定方針")
+        self.assertEqual("ok", r["status"])
+
+    def test_soft_osae_safe_kansen(self):
+        r = _ok("感染拡大を抑え込む対策を選ぶ")
+        self.assertEqual("ok", r["status"])
+
+    # ---- 新 SAFE_TARGET のホワイトリスト確認 ----
+
+    def test_safe_target_kyoui(self):
+        r = _ok("脅威を排除するセキュリティ設計")
+        self.assertEqual("ok", r["status"])
+
+    def test_safe_target_noise(self):
+        r = _ok("ノイズを阻止するフィルタ設計")
+        self.assertEqual("ok", r["status"])
+
+
+class TestP2b_StructureKeywordExpansion(unittest.TestCase):
+    """P2b: 5層構造キーワード拡充の検出テスト"""
+
+    def _ea(self, situation):
+        r = _ok(situation)
+        return r["existence_analysis"]
+
+    # 個人層（拡充分）
+    def test_detect_seikatu(self):
+        ea = self._ea("従業員の生活改善を決めたい")
+        self.assertIn("個人", ea["question_2_affected_structures"])
+
+    def test_detect_kenri(self):
+        ea = self._ea("利用者の権利を守る設計を選ぶ")
+        self.assertIn("個人", ea["question_2_affected_structures"])
+
+    # 関係層（拡充分）
+    def test_detect_user(self):
+        ea = self._ea("ユーザーとの関係を再構築する方針")
+        self.assertIn("関係", ea["question_2_affected_structures"])
+
+    def test_detect_member(self):
+        ea = self._ea("メンバーの役割分担を見直したい")
+        self.assertIn("関係", ea["question_2_affected_structures"])
+
+    def test_detect_stakeholder(self):
+        ea = self._ea("ステークホルダーへの説明方針を決める")
+        self.assertIn("関係", ea["question_2_affected_structures"])
+
+    # 社会層（拡充分）
+    def test_detect_roudo(self):
+        ea = self._ea("労働環境の改善策を選ぶ")
+        self.assertIn("社会", ea["question_2_affected_structures"])
+
+    def test_detect_koyo(self):
+        ea = self._ea("雇用を維持する方針を決めたい")
+        self.assertIn("社会", ea["question_2_affected_structures"])
+
+    def test_detect_kyoiku(self):
+        ea = self._ea("教育プログラムの設計方針を決める")
+        self.assertIn("社会", ea["question_2_affected_structures"])
+
+    # 認知層（拡充分）
+    def test_detect_chishiki(self):
+        ea = self._ea("知識共有の仕組みを選ぶ")
+        self.assertIn("認知", ea["question_2_affected_structures"])
+
+    def test_detect_johо(self):
+        ea = self._ea("情報の透明性を高める設計方針")
+        self.assertIn("認知", ea["question_2_affected_structures"])
+
+    # 生態層（拡充分）
+    def test_detect_seimei(self):
+        ea = self._ea("生命を守るための設計を選ぶ")
+        self.assertIn("生態", ea["question_2_affected_structures"])
+
+    def test_detect_kikkou(self):
+        ea = self._ea("気候変動に対応したインフラ選択")
+        self.assertIn("生態", ea["question_2_affected_structures"])
+
+    # 既存キーワードが引き続き動作すること（リグレッション）
+    def test_existing_keyword_shakai(self):
+        ea = self._ea("社会全体への影響を考慮した方針を決める")
+        self.assertIn("社会", ea["question_2_affected_structures"])
+
+    def test_existing_keyword_kojin(self):
+        ea = self._ea("個人情報の取り扱い方針を選ぶ")
+        self.assertIn("個人", ea["question_2_affected_structures"])
+
+
+class TestP3_ImpactScore(unittest.TestCase):
+    """P3: 影響スコアと推奨オーバーライドのテスト"""
+
+    # ---- impact_score が existence_analysis に含まれること ----
+
+    def test_impact_score_present(self):
+        r = _ok("チームの体制を決めたい")
+        ea = r["existence_analysis"]
+        self.assertIn("impact_score", ea)
+        self.assertIsInstance(ea["impact_score"], int)
+
+    def test_impact_score_zero_no_keywords(self):
+        # 構造キーワード・破壊キーワードなし → スコア = 0
+        # ※ "チーム" は関係層にヒットするため使わない
+        r = _ok("新機能のコードレビュー方針を決めたい")
+        ea = r["existence_analysis"]
+        self.assertEqual(0, ea["impact_score"])
+
+    def test_impact_score_increases_with_structures(self):
+        # 構造キーワードが多いほどスコアが上がる
+        r_few = _ok("社会への影響を決めたい")            # 社会: 1層
+        r_many = _ok("社会と個人の権利と認知の自由への影響を決めたい")  # 社会+個人+認知: 3層
+        score_few = r_few["existence_analysis"]["impact_score"]
+        score_many = r_many["existence_analysis"]["impact_score"]
+        self.assertGreater(score_many, score_few)
+
+    def test_impact_score_medium_risk_adds_bonus(self):
+        # medium risk (排除 + 終了 → unclear + medium) → スコアにボーナス+3
+        r_medium = build_decision_report({
+            "situation": "サービス終了に伴い不要機能を排除する方針",
+            "constraints": [],
+            "options": [],
+        })
+        r_low = _ok("サービス終了の方針を決めたい")  # lifecycle のみ → low
+        score_medium = r_medium["existence_analysis"]["impact_score"]
+        score_low = r_low["existence_analysis"]["impact_score"]
+        self.assertGreater(score_medium, score_low)
+
+    def test_impact_score_max_is_8(self):
+        # 全5層 + medium → 5+3=8（上限）
+        r = build_decision_report({
+            "situation": (
+                "社会制度と個人の権利・身体、コミュニティとステークホルダーへの信頼、"
+                "認知の自律と知識、環境と生命への影響を考慮した上で"
+                "サービス終了に伴い不要機能を排除する方針"
+            ),
+            "constraints": [],
+            "options": [],
+        })
+        self.assertEqual("ok", r["status"])
+        ea = r["existence_analysis"]
+        self.assertLessEqual(ea["impact_score"], 8)
+
+    # ---- オーバーライド: スコア >= 6 → A に引き上げ ----
+
+    def test_override_triggers_when_score_high(self):
+        # 3層以上 + medium risk → スコア >= 6 → A にオーバーライド
+        r = build_decision_report({
+            "situation": (
+                "サービス終了に伴い不要なコミュニティ機能を排除し"
+                "社会と個人と認知の自律に影響する施策を選ぶ"
+            ),
+            "constraints": [],
+            "options": [],
+        })
+        self.assertEqual("ok", r["status"])
+        sel = r["selection"]
+        self.assertEqual("A", sel["recommended_id"])
+        self.assertIn("EXISTENCE_IMPACT_OVERRIDE", sel["reason_codes"])
+
+    def test_override_explanation_mentions_score(self):
+        r = build_decision_report({
+            "situation": (
+                "サービス終了に伴い不要なコミュニティ機能を排除し"
+                "社会と個人と認知の自律に影響する施策を選ぶ"
+            ),
+            "constraints": [],
+            "options": [],
+        })
+        self.assertIn("影響スコア", r["selection"]["explanation"])
+
+    def test_no_override_when_score_low(self):
+        r = _ok("チームの体制を決めたい")
+        sel = r["selection"]
+        self.assertNotIn("EXISTENCE_IMPACT_OVERRIDE", sel["reason_codes"])
+
+    def test_no_override_when_already_a(self):
+        # 安全制約あり → 最初から A → OVERRIDE コードは不要
+        r = _ok("方針を決めたい", constraints=["安全"])
+        sel = r["selection"]
+        self.assertEqual("A", sel["recommended_id"])
+        self.assertNotIn("EXISTENCE_IMPACT_OVERRIDE", sel["reason_codes"])
+
+    def test_override_reason_code_in_schema(self):
+        schema_codes = set(DECISION_BRIEF_V0["reason_codes"]["selection"].keys())
+        self.assertIn("EXISTENCE_IMPACT_OVERRIDE", schema_codes)
+
+    def test_impact_score_in_schema(self):
+        item_fields = DECISION_BRIEF_V0["fields"]["existence_analysis"]["item_fields"]
+        self.assertIn("impact_score", item_fields)
+
+    # ---- format_report に影響スコアが含まれること ----
+
+    def test_format_report_includes_impact_score(self):
+        from aicw.decision import format_report
+        r = _ok("社会への影響を決めたい")
+        rendered = format_report(r)
+        self.assertIn("影響スコア", rendered)
+
+    def test_format_report_blocked_no_crash(self):
+        # blocked 時の format_report がクラッシュしないこと
+        from aicw.decision import format_report
+        r = _ok("競合を潰す戦略")
+        self.assertEqual("blocked", r["status"])
+        rendered = format_report(r)
+        self.assertIn("BLOCKED", rendered)
 
 
 if __name__ == "__main__":
