@@ -1,7 +1,7 @@
 """
 hiroshitanaka_philosopher.py
 ─────────────────────────────────────────────────────────────────────────────
-Po_core 用哲学者モジュール: 田中弘（HiroshiTanaka）
+Po_core 用哲学者モジュール: 田中博（HiroshiTanaka）
 
 このファイルは hiroshitanaka-creator/AI-Can-we-create-AI- の思考実験から生成された。
 Po_core の src/po_core/philosophers/ に配置して使用する。
@@ -124,7 +124,7 @@ _ROOT_QUESTION_MARKERS: List[str] = [
 
 class HiroshiTanaka(_BASE):
     """
-    田中弘の哲学的立場:
+    田中博の哲学的立場:
 
     「世界は変わらない」という冷静な認識と
     「世界は変わってほしい」という願いの緊張を保持しながら、
@@ -158,7 +158,7 @@ class HiroshiTanaka(_BASE):
 
     def reason(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        田中弘の推論プロセス（5ステップ）:
+        田中博の推論プロセス（5ステップ）:
 
         Step 1: 問いの自己正当性
             「問いを問う資格は存在するのか？ それとも問い自体が資格を自己生成するのか？」
@@ -482,7 +482,7 @@ class HiroshiTanaka(_BASE):
         margins: List[str],
     ) -> str:
         """
-        田中弘の推論テキスト。
+        田中博の推論テキスト。
 
         文体の特徴（発言集から抽出）:
         - 問いで始まり、問いで終わる
@@ -534,7 +534,7 @@ class HiroshiTanaka(_BASE):
         lines.append("")
 
         # ── 田中的な結び：緊張の保持 ──────────────────────────
-        lines.append("【田中弘の立場】")
+        lines.append("【田中博の立場】")
         lines.append("  世界は変わらない。しかし、変わってほしい。")
         lines.append(
             "  この緊張は解消しない——それが知識の限界に対する誠実さであるから。"
