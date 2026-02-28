@@ -102,19 +102,19 @@
   - Notes: 出力候補を人間の最終決定と比較し、類似度が異常なら警告。実装難易度は高いが、No-Go #4 の実質的な強化になる
   - Status: backlog
 
-- [ ] (2026-02-28) Idea: 「AIの限界宣言」機能を全出力に強制挿入
+- [x] (2026-02-28) Idea: 「AIの限界宣言」機能を全出力に強制挿入
   - Source: Grok
   - Why: 「最終判断は人間です」をコードレベルで保証し、AIへの過信を構造的に防ぐため
-  - Notes: format_report() の末尾に固定フッター「⚠ この出力は参考情報です。最終判断は必ず人間が行ってください」を追加するだけで実装可能。schema に disclaimer フィールドを追加
-  - Status: backlog
+  - Notes: _DISCLAIMER 定数 + report["disclaimer"] + format_report() の [Disclaimer] セクションとして実装済み（session 10）
+  - Status: done
 
 ### カテゴリ4: ユーザー体験・デモ拡張
 
-- [ ] (2026-02-28) Idea: 3者レビュー（Builder/Skeptic/User）を CLI で自動実行するスクリプト
+- [x] (2026-02-28) Idea: 3者レビュー（Builder/Skeptic/User）を CLI で自動実行するスクリプト
   - Source: Grok
   - Why: guideline.md の 3-Review Rule をコードで体現するため
-  - Notes: scripts/three_review.py として実装。同一 request に対して3つの視点（実装者・懐疑論者・最終判断者）を自動生成し、対話形式で出力。標準ライブラリのみ
-  - Status: backlog
+  - Notes: scripts/three_review.py として実装済み（session 10）。パイプ対応（md_adapter | three_review）
+  - Status: done
 
 - [ ] (2026-02-28) Idea: 決定後の「事後検証テンプレート」自動生成
   - Source: Grok
@@ -122,11 +122,11 @@
   - Notes: decision_brief の recommendation と next_questions から「事後チェックリスト」を自動生成。scripts/postmortem_template.py で実装可能
   - Status: backlog
 
-- [ ] (2026-02-28) Idea: 候補案の「影響範囲マップ」自動作成
+- [x] (2026-02-28) Idea: 候補案の「影響範囲マップ」自動作成
   - Source: Grok
   - Why: 「誰にどんな影響が出るか」を受益者×影響構造の表で可視化するため
-  - Notes: existence_analysis の q1/q2 を使って Markdown テーブルを生成。format_report() の拡張として実装可能
-  - Status: backlog
+  - Notes: _build_impact_map() + report["impact_map"] + format_report() の [Impact Map] セクションとして実装済み（session 10）
+  - Status: done
 
 - [ ] (2026-02-28) Idea: 入力の「文脈圧縮」自動機能
   - Source: Grok

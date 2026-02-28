@@ -370,6 +370,41 @@ def _build_counterarguments(
     return items[:4]
 
 
+_DISCLAIMER = (
+    "⚠ この出力は参考情報です。最終判断は人間が行ってください。"
+    "AIは根拠・反証・不確実性を構造化して提示するものであり、決定を代替しません。"
+)
+
+
+def _build_impact_map(existence_analysis: Dict[str, Any]) -> str:
+    """
+    受益者 × 影響構造 の影響範囲マップ（Markdown テーブル）を生成する。
+    人間が見て「誰にどんな影響が出るか」を確認するための叩き台。
+    """
+    beneficiaries = existence_analysis.get("question_1_beneficiaries", [])
+    structures = existence_analysis.get("question_2_affected_structures", [])
+
+    # 「不明」を含む要素は除外（情報なし）
+    bens = [b for b in beneficiaries if "不明" not in b]
+    strs = [s for s in structures if "不明" not in s]
+
+    if not bens and not strs:
+        return "（受益者・影響構造が未特定のため、マップを生成できません）"
+
+    if not bens:
+        bens = ["受益者（未特定）"]
+    if not strs:
+        strs = ["影響構造（未特定）"]
+
+    header = "| 受益者 \\ 影響構造 | " + " | ".join(strs) + " |"
+    sep = "|" + "---|" * (len(strs) + 1)
+    rows = [header, sep]
+    for b in bens:
+        row = "| " + b + " | " + " | ".join(["？（要確認）"] * len(strs)) + " |"
+        rows.append(row)
+    return "\n".join(rows)
+
+
 def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
     """
     P0: オフライン・非公開用の最小意思決定支援。
@@ -494,6 +529,8 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
         ],
         "next_questions": _build_next_questions(existence_analysis, constraints),
         "existence_analysis": existence_analysis,
+        "impact_map": _build_impact_map(existence_analysis),
+        "disclaimer": _DISCLAIMER,
     }
 
     # --- No-Go #4: anti-manipulation guard (output) ---
@@ -595,11 +632,20 @@ def format_report(report: Dict[str, Any]) -> str:
         lines.append(f"- 影響スコア: {ea.get('impact_score', 0)} / 8")
         lines.append(f"- 説明: {ea.get('judgment_text')}")
 
+    impact_map = report.get("impact_map")
+    if impact_map:
+        lines.append("")
+        lines.append("[Impact Map]")
+        lines.append(impact_map)
+
     warnings = report.get("warnings") or []
     if warnings:
         lines.append("")
         lines.append("[Warnings]")
         for w in warnings:
             lines.append(f"- {w}")
+
+    lines.append("")
+    lines.append(f"[Disclaimer] {report.get('disclaimer', _DISCLAIMER)}")
 
     return "\n".join(lines)

@@ -132,9 +132,12 @@ No-Go (#3/#4/#6) はこの原則の**派生**：
 - [x] 動的 counterarguments（existence_analysis に応じて最大4件を生成）
 - [x] bridge/hiroshitanaka_philosopher.py 作成（Po_core 用哲学者モジュール）
 - [x] test_p0_dynamic.py を pytest → unittest 標準ライブラリに変換（304 tests PASS）
-- [ ] Markdown 入力アダプタ（scripts/md_adapter.py: MD → decision_request.v0 JSON 変換）
+- [x] Markdown 入力アダプタ（scripts/md_adapter.py: MD → decision_request.v0 JSON 変換）
 - [x] tests/test_bridge.py 追加（HiroshiTanaka.reason() のユニットテスト、22件）
 - [x] bridge: #5 blocked 時に q3_judgment を "self_interested_destruction" に設定するバグ修正
+- [x] disclaimer（AI限界宣言）を全 ok 出力に強制挿入
+- [x] impact_map（影響範囲マップ）を decision_brief に追加（受益者×影響構造 Markdown テーブル）
+- [x] scripts/three_review.py（3者レビューCLI: Builder/Skeptic/User）を実装
 
 ## How to run / test
 
