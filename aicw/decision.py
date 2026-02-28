@@ -292,6 +292,84 @@ def _build_next_questions(
     return questions[:6]
 
 
+def _build_uncertainties(
+    existence_analysis: Dict[str, Any],
+    constraints: List[str],
+) -> List[str]:
+    """
+    existence_analysis の内容に応じてコンテキスト依存の不確実性リストを生成する。
+    最大 5 件を返す。
+    """
+    items: List[str] = [
+        "成功の定義（何が達成できれば勝ちか）が未確定の可能性。",
+    ]
+
+    beneficiaries = existence_analysis.get("question_1_beneficiaries", [])
+    structures = existence_analysis.get("question_2_affected_structures", [])
+    distortion_risk = existence_analysis.get("distortion_risk", "low")
+    impact_score = existence_analysis.get("impact_score", 0)
+
+    beneficiaries_unknown = any("不明" in b for b in beneficiaries)
+    structures_unknown = any("不明" in s for s in structures)
+
+    if beneficiaries_unknown:
+        items.append("受益者（誰がどう得をするか）が未特定のため、想定外の利害が生じる可能性。")
+
+    if structures_unknown:
+        items.append("影響を受ける構造が未特定のため、外部性の見積もりが不十分な可能性。")
+    else:
+        items.append("失敗した場合の被害（誰に何が起きるか）が未確定の可能性。")
+
+    if distortion_risk == "medium":
+        items.append("歪みリスクが中程度：ライフサイクルと破壊の混在により、誰の利益かが曖昧な可能性。")
+
+    if impact_score >= 4:
+        items.append("複数の生存構造層に影響するため、未把握の外部性が残る可能性。")
+
+    if not constraints:
+        items.append("制約が不明確なため、選択肢の安全/品質基準が未確定の可能性。")
+
+    return items[:5]
+
+
+def _build_counterarguments(
+    existence_analysis: Dict[str, Any],
+) -> List[str]:
+    """
+    existence_analysis の内容に応じてコンテキスト依存の反論リストを生成する。
+    最大 4 件を返す。
+    """
+    items: List[str] = [
+        "前提が足りない可能性がある（不足情報があるなら保留も選択肢）。",
+    ]
+
+    beneficiaries = existence_analysis.get("question_1_beneficiaries", [])
+    structures = existence_analysis.get("question_2_affected_structures", [])
+    judgment = existence_analysis.get("question_3_judgment", "unclear")
+    distortion_risk = existence_analysis.get("distortion_risk", "low")
+    impact_score = existence_analysis.get("impact_score", 0)
+
+    beneficiaries_unknown = any("不明" in b for b in beneficiaries)
+    structures_unknown = any("不明" in s for s in structures)
+
+    if beneficiaries_unknown:
+        items.append("受益者が未特定のまま進めると、意図しない人が損をするリスクがある。")
+
+    if structures_unknown:
+        items.append("影響構造を明示しないまま決定すると、後から取り返しのつかない外部性が生じる可能性がある。")
+    else:
+        items.append("短期の最適化が外部性を増やす可能性がある（影響者を確認）。")
+
+    if distortion_risk == "medium":
+        items.append("「誰の私益か」が曖昧なまま進めると、短期最適が長期歪みにつながる可能性がある。")
+    elif judgment == "lifecycle":
+        items.append("移行・終了のプロセスで影響を受ける人への配慮が不足すると、関係の破綻につながる可能性がある。")
+    elif impact_score >= 4:
+        items.append("複数層への影響があるため、段階的実施・中間評価を検討すべき。")
+
+    return items[:4]
+
+
 def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
     """
     P0: オフライン・非公開用の最小意思決定支援。
@@ -407,14 +485,8 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
             "reason_codes": reason_codes,
             "explanation": explanation,
         },
-        "counterarguments": [
-            "前提が足りない可能性がある（不足情報があるなら保留も選択肢）。",
-            "短期の最適化が外部性を増やす可能性がある（影響者を確認）。",
-        ],
-        "uncertainties": [
-            "成功の定義（何が達成できれば勝ちか）が未確定の可能性。",
-            "失敗した場合の被害（誰に何が起きるか）が未確定の可能性。",
-        ],
+        "counterarguments": _build_counterarguments(existence_analysis),
+        "uncertainties": _build_uncertainties(existence_analysis, constraints),
         "externalities": [
             "関係者の時間コスト",
             "品質/安全への影響",

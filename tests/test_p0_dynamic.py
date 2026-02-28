@@ -3,6 +3,8 @@ tests/test_p0_dynamic.py
 
 A: _build_next_questions の動的生成テスト
 B: _build_existence_alternatives の具体化テスト
+C: _build_uncertainties の動的生成テスト
+D: _build_counterarguments の動的生成テスト
 """
 from __future__ import annotations
 
@@ -10,6 +12,8 @@ import pytest
 from aicw.decision import (
     _build_next_questions,
     _build_existence_alternatives,
+    _build_uncertainties,
+    _build_counterarguments,
     _DESTRUCTION_ALTERNATIVES,
     _HARD_DESTRUCTION_KEYWORDS,
     _SOFT_DESTRUCTION_KEYWORDS,
@@ -311,3 +315,222 @@ class TestBlockedAlternatives:
         alts = report["safe_alternatives"]
         # 潰す or 独占 の固有提案が含まれているはず
         assert any("潰す" in a or "独占" in a for a in alts)
+
+
+# ===========================================================================
+# C: TestDynamicUncertainties
+# ===========================================================================
+
+class TestDynamicUncertainties:
+
+    def test_base_uncertainty_always_present(self):
+        """「成功の定義」は常に含まれる"""
+        result = _build_uncertainties(_ea(), constraints=[])
+        assert any("成功の定義" in u for u in result)
+
+    def test_beneficiaries_unknown_adds_uncertainty(self):
+        """受益者不明 → 利害の不確実性が追加される"""
+        ea = _ea(beneficiaries=["不明（...）"])
+        result = _build_uncertainties(ea, constraints=["安全"])
+        assert any("受益者" in u and "未特定" in u for u in result)
+
+    def test_beneficiaries_known_no_beneficiary_uncertainty(self):
+        """受益者既知 → 受益者の不確実性は追加されない"""
+        ea = _ea(beneficiaries=["開発チーム"])
+        result = _build_uncertainties(ea, constraints=["安全"])
+        assert not any("受益者" in u and "未特定" in u for u in result)
+
+    def test_structures_unknown_adds_external_uncertainty(self):
+        """構造不明 → 外部性の見積もり不足が追加される"""
+        ea = _ea(structures=["不明（...）"])
+        result = _build_uncertainties(ea, constraints=["安全"])
+        assert any("外部性の見積もり" in u for u in result)
+
+    def test_structures_known_adds_failure_uncertainty(self):
+        """構造既知 → 「失敗した場合の被害」が追加される"""
+        ea = _ea(structures=["個人", "社会"])
+        result = _build_uncertainties(ea, constraints=["安全"])
+        assert any("失敗した場合の被害" in u for u in result)
+
+    def test_structures_known_no_external_estimate_uncertainty(self):
+        """構造既知 → 「外部性の見積もり」は追加されない"""
+        ea = _ea(structures=["個人"])
+        result = _build_uncertainties(ea, constraints=["安全"])
+        assert not any("外部性の見積もり" in u for u in result)
+
+    def test_distortion_risk_medium_adds_distortion_uncertainty(self):
+        """歪みリスク medium → 誰の利益か曖昧の不確実性が追加される"""
+        ea = _ea(structures=["個人"], distortion_risk="medium")
+        result = _build_uncertainties(ea, constraints=["安全"])
+        assert any("歪みリスクが中程度" in u for u in result)
+
+    def test_distortion_risk_low_no_distortion_uncertainty(self):
+        """歪みリスク low → 歪みリスクの不確実性は追加されない"""
+        ea = _ea(structures=["個人"], distortion_risk="low")
+        result = _build_uncertainties(ea, constraints=["安全"])
+        assert not any("歪みリスクが中程度" in u for u in result)
+
+    def test_high_impact_score_adds_layer_uncertainty(self):
+        """impact_score >= 4 → 複数層の外部性の不確実性が追加される"""
+        ea = _ea(structures=["個人", "関係", "社会", "認知"], impact_score=4)
+        result = _build_uncertainties(ea, constraints=["安全"])
+        assert any("複数の生存構造層" in u for u in result)
+
+    def test_low_impact_score_no_layer_uncertainty(self):
+        """impact_score < 4 → 複数層の不確実性は追加されない"""
+        ea = _ea(structures=["個人"], impact_score=1)
+        result = _build_uncertainties(ea, constraints=["安全"])
+        assert not any("複数の生存構造層" in u for u in result)
+
+    def test_no_constraints_adds_constraint_uncertainty(self):
+        """制約なし → 基準未確定の不確実性が追加される"""
+        ea = _ea(structures=["個人"])
+        result = _build_uncertainties(ea, constraints=[])
+        assert any("制約が不明確" in u for u in result)
+
+    def test_constraints_present_no_constraint_uncertainty(self):
+        """制約あり → 制約の不確実性は追加されない"""
+        ea = _ea(structures=["個人"])
+        result = _build_uncertainties(ea, constraints=["安全を重視"])
+        assert not any("制約が不明確" in u for u in result)
+
+    def test_max_5_uncertainties(self):
+        """最大 5 件を超えない"""
+        ea = _ea(
+            beneficiaries=["不明（...）"],
+            structures=["不明（...）"],
+            distortion_risk="medium",
+            impact_score=5,
+        )
+        result = _build_uncertainties(ea, constraints=[])
+        assert len(result) <= 5
+
+    def test_integration_uncertainties_in_report(self):
+        """build_decision_report 経由でも動的 uncertainties が返る"""
+        report = build_decision_report({"situation": "新機能のリリースを判断したい"})
+        assert report["status"] == "ok"
+        unc = report["uncertainties"]
+        assert isinstance(unc, list)
+        assert len(unc) >= 1
+        assert any("成功の定義" in u for u in unc)
+
+    def test_integration_structures_known_has_failure_uncertainty(self):
+        """situation に構造キーワードあり → 「失敗した場合の被害」が uncertainties に含まれる"""
+        report = build_decision_report({
+            "situation": "チームの体制変更を検討",
+            "constraints": ["安全を重視"],
+        })
+        assert report["status"] == "ok"
+        assert any("失敗した場合の被害" in u for u in report["uncertainties"])
+
+
+# ===========================================================================
+# D: TestDynamicCounterarguments
+# ===========================================================================
+
+class TestDynamicCounterarguments:
+
+    def test_base_counterargument_always_present(self):
+        """「前提が足りない」は常に含まれる"""
+        result = _build_counterarguments(_ea())
+        assert any("前提が足りない" in c for c in result)
+
+    def test_beneficiaries_unknown_adds_counterargument(self):
+        """受益者不明 → 意図しない損者リスクの反論が追加される"""
+        ea = _ea(beneficiaries=["不明（...）"])
+        result = _build_counterarguments(ea)
+        assert any("受益者が未特定" in c for c in result)
+
+    def test_beneficiaries_known_no_beneficiary_counterargument(self):
+        """受益者既知 → 受益者未特定の反論は追加されない"""
+        ea = _ea(beneficiaries=["チーム"])
+        result = _build_counterarguments(ea)
+        assert not any("受益者が未特定" in c for c in result)
+
+    def test_structures_unknown_adds_external_counterargument(self):
+        """構造不明 → 外部性の反論が追加される"""
+        ea = _ea(structures=["不明（...）"])
+        result = _build_counterarguments(ea)
+        assert any("影響構造を明示しない" in c for c in result)
+
+    def test_structures_known_adds_short_term_counterargument(self):
+        """構造既知 → 短期最適化の反論が追加される"""
+        ea = _ea(structures=["個人", "関係"])
+        result = _build_counterarguments(ea)
+        assert any("短期の最適化" in c for c in result)
+
+    def test_distortion_risk_medium_adds_private_interest_counterargument(self):
+        """歪みリスク medium → 誰の私益かの反論が追加される"""
+        ea = _ea(structures=["個人"], distortion_risk="medium")
+        result = _build_counterarguments(ea)
+        assert any("誰の私益か" in c for c in result)
+
+    def test_lifecycle_adds_transition_counterargument(self):
+        """judgment == lifecycle → 移行の反論が追加される"""
+        ea = _ea(structures=["個人"], judgment="lifecycle", distortion_risk="low")
+        result = _build_counterarguments(ea)
+        assert any("移行・終了" in c for c in result)
+
+    def test_high_impact_score_adds_staged_counterargument(self):
+        """impact_score >= 4, unclear → 段階的実施の反論が追加される"""
+        ea = _ea(
+            structures=["個人", "関係", "社会", "認知"],
+            judgment="unclear",
+            distortion_risk="low",
+            impact_score=4,
+        )
+        result = _build_counterarguments(ea)
+        assert any("段階的実施" in c for c in result)
+
+    def test_medium_risk_priority_over_lifecycle_in_counterargs(self):
+        """distortion_risk=medium は lifecycle より優先される"""
+        ea = _ea(
+            structures=["個人"],
+            judgment="lifecycle",
+            distortion_risk="medium",
+        )
+        result = _build_counterarguments(ea)
+        assert any("誰の私益か" in c for c in result)
+        assert not any("移行・終了" in c for c in result)
+
+    def test_lifecycle_priority_over_impact_in_counterargs(self):
+        """judgment=lifecycle は impact_score >= 4 より優先される"""
+        ea = _ea(
+            structures=["個人", "関係", "社会", "認知"],
+            judgment="lifecycle",
+            distortion_risk="low",
+            impact_score=4,
+        )
+        result = _build_counterarguments(ea)
+        assert any("移行・終了" in c for c in result)
+        assert not any("段階的実施" in c for c in result)
+
+    def test_max_4_counterarguments(self):
+        """最大 4 件を超えない"""
+        ea = _ea(
+            beneficiaries=["不明（...）"],
+            structures=["不明（...）"],
+            judgment="unclear",
+            distortion_risk="medium",
+            impact_score=5,
+        )
+        result = _build_counterarguments(ea)
+        assert len(result) <= 4
+
+    def test_integration_counterarguments_in_report(self):
+        """build_decision_report 経由でも動的 counterarguments が返る"""
+        report = build_decision_report({"situation": "新機能のリリースを判断したい"})
+        assert report["status"] == "ok"
+        ca = report["counterarguments"]
+        assert isinstance(ca, list)
+        assert len(ca) >= 1
+        assert any("前提が足りない" in c for c in ca)
+
+    def test_integration_structures_known_has_short_term_counterargument(self):
+        """構造キーワードあり → 「短期の最適化」が counterarguments に含まれる"""
+        report = build_decision_report({
+            "situation": "チームの意思決定フローを変えたい",
+            "constraints": ["品質を重視"],
+        })
+        assert report["status"] == "ok"
+        assert any("短期の最適化" in c for c in report["counterarguments"])

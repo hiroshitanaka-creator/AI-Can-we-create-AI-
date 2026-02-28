@@ -1,6 +1,36 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-02-28 (session 8 — uncertainties + counterarguments の動的化)
+
+### Goal
+- `uncertainties` を existence_analysis に応じて動的生成
+- `counterarguments` を existence_analysis に応じて動的生成
+
+### Done
+- `aicw/decision.py`:
+  - `_build_uncertainties(existence_analysis, constraints)`: 最大 5 件を動的生成
+    - 常時: 成功の定義
+    - 受益者不明 → 利害の不確実性
+    - 構造不明 → 外部性見積もり不足 / 構造既知 → 失敗した場合の被害
+    - distortion_risk=medium → 歪みリスク中程度の不確実性
+    - impact_score >= 4 → 複数層の外部性
+    - 制約なし → 基準未確定
+  - `_build_counterarguments(existence_analysis)`: 最大 4 件を動的生成
+    - 常時: 前提が足りない
+    - 受益者不明 → 意図しない損者リスク
+    - 構造不明 → 外部性の反論 / 構造既知 → 短期最適化の反論
+    - distortion_risk=medium → 誰の私益か（優先）
+    - judgment=lifecycle → 移行への配慮（次優先）
+    - impact_score >= 4 → 段階的実施（その次）
+  - `build_decision_report()`: static を両関数で置換
+- `tests/test_p0_dynamic.py`: TestDynamicUncertainties (15件) + TestDynamicCounterarguments (13件) 追加
+
+### Test Results
+- 304 tests PASS (276 → 304, +28)
+
+---
+
 ## 2026-02-28 (session 7 — 動的 next_questions + blocked 代替案の具体化)
 
 ### Goal
