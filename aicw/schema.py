@@ -103,7 +103,11 @@ DECISION_BRIEF_V0: Dict[str, Any] = {
         "counterarguments": {"type": "list[str]", "required_if": "status == ok"},
         "uncertainties":    {"type": "list[str]", "required_if": "status == ok"},
         "externalities":    {"type": "list[str]", "required_if": "status == ok"},
-        "next_questions":   {"type": "list[str]", "required_if": "status == ok"},
+        "next_questions":   {
+            "type": "list[str]",
+            "required_if": "status == ok",
+            "description": "コンテキスト依存の次の質問（最大6件）。受益者・構造・歪みリスク・スコアに応じて動的生成。",
+        },
         "existence_analysis": {
             "type": "dict",
             "required_if": "status == ok",

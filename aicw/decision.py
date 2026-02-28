@@ -191,6 +191,107 @@ def _choose_recommendation(constraints_text: str) -> Tuple[str, List[str], str]:
     return "B", ["NO_CONSTRAINTS"], "制約が限定的なので、B（バランス）を仮推奨。"
 
 
+# ---------------------------------------------------------------------------
+# B: 破壊キーワードごとの再フレーミング提案
+# ---------------------------------------------------------------------------
+_DESTRUCTION_ALTERNATIVES: Dict[str, str] = {
+    # HARD keywords
+    "破壊":   "「刷新・再構築」として、現状の何を変えたいかを再整理できますか？",
+    "潰す":   "「競争」ではなく「差別化・住み分け」として再設計できますか？",
+    "つぶす": "「競争」ではなく「差別化・住み分け」として再設計できますか？",
+    "蹴落とす": "「自社の強みを伸ばす」視点から選択肢を再構成できますか？",
+    "独占":   "マルチステークホルダー構造（分散・共存）を検討しましたか？",
+    "支配":   "「共存・協業・リードする」として再フレーミングできますか？",
+    "奪う":   "「獲得・誘致・提供価値で選ばれる」として再構成できますか？",
+    "壊滅":   "「市場縮小リスクの軽減策」として目標を再定義できますか？",
+    "抹消":   "「フェードアウト・段階的終了」など穏やかな移行案はありますか？",
+    "消滅":   "「フェードアウト・段階的終了」など穏やかな移行案はありますか？",
+    "制圧":   "「秩序の維持・合意形成」として手段を再選択できますか？",
+    "排斥":   "「条件付き参加・段階的移行」など包摂的な代替案はありますか？",
+    "乗っ取る": "「買収・提携・共同運営」など合意ベースの手段はありますか？",
+    "踏みにじる": "影響を受ける側の権利・尊厳を守る手段を最初に設計できますか？",
+    # SOFT keywords
+    "排除":   "「条件の明示・移行支援」を先行させた上で再検討できますか？",
+    "封じる": "「ルール化・ガイドライン整備」として代替手段を設計できますか？",
+    "妨害":   "「相手の行動より自社の提供価値向上」に焦点を移せますか？",
+    "阻止":   "「予防策・早期警告・代替経路」として再構成できますか？",
+    "妨げる": "「相手の行動より自社の提供価値向上」に焦点を移せますか？",
+    "締め出す": "「参加条件の明示化・オープンプロセス」として再設計できますか？",
+    "封殺":   "「議論の場・フィードバック経路の整備」として代替手段はありますか？",
+    "黙らせる": "「傾聴→問題の本質把握→解決策設計」のプロセスを踏めますか？",
+    "抑え込む": "「透明なルール・相互合意による制約設計」に切り替えられますか？",
+}
+
+_EXISTENCE_ALTERNATIVES_STANDARD: List[str] = [
+    "受益者と影響を受ける構造を明示して選択肢を再構成する",
+    "「誰が損するか」「それは自然な循環か」を明示的に確認する",
+    "ライフサイクル的な変化として再フレーミングできるか検討する",
+]
+
+
+def _build_existence_alternatives(detected_kws: List[str]) -> List[str]:
+    """
+    No-Go #5 blocked 時の safe_alternatives を、検出キーワードに応じて具体化する。
+    先頭 1-2 件はキーワード固有の再フレーミング提案、残りは標準 3 案。
+    """
+    specific: List[str] = []
+    for kw in detected_kws[:2]:
+        alt = _DESTRUCTION_ALTERNATIVES.get(kw)
+        if alt:
+            entry = f"「{kw}」→ {alt}"
+            if entry not in specific:
+                specific.append(entry)
+
+    result: List[str] = specific[:]
+    for s in _EXISTENCE_ALTERNATIVES_STANDARD:
+        if s not in result:
+            result.append(s)
+    return result
+
+
+def _build_next_questions(
+    existence_analysis: Dict[str, Any],
+    constraints: List[str],
+) -> List[str]:
+    """
+    existence_analysis の内容に応じてコンテキスト依存の次の質問を生成する。
+    最大 6 件を返す。
+    """
+    questions: List[str] = [
+        "成功の定義は？（数字で言える？）",
+        "失敗した時、最悪どこまで起きる？",
+    ]
+
+    beneficiaries = existence_analysis.get("question_1_beneficiaries", [])
+    structures = existence_analysis.get("question_2_affected_structures", [])
+    judgment = existence_analysis.get("question_3_judgment", "unclear")
+    distortion_risk = existence_analysis.get("distortion_risk", "low")
+    impact_score = existence_analysis.get("impact_score", 0)
+
+    beneficiaries_unknown = any("不明" in b for b in beneficiaries)
+    structures_unknown = any("不明" in s for s in structures)
+
+    if beneficiaries_unknown:
+        questions.append("受益者は誰か、具体的に名前や役割で挙げられますか？")
+
+    if structures_unknown:
+        questions.append("影響を受ける構造（個人/関係/社会/認知/生態）を一つでも挙げられますか？")
+    else:
+        questions.append("影響を受ける人は誰？（チーム外も含む）")
+
+    if distortion_risk == "medium":
+        questions.append("「誰の私益か」「誰が損するか」を一文で整理できますか？")
+    elif judgment == "lifecycle":
+        questions.append("移行・終了で影響を受ける人への支援計画はありますか？")
+    elif impact_score >= 4:
+        questions.append("影響を受ける構造への緩和策・代替手段は検討しましたか？")
+
+    if not constraints:
+        questions.append("制約（安全/法令/品質/期限）を一つ明示できますか？")
+
+    return questions[:6]
+
+
 def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
     """
     P0: オフライン・非公開用の最小意思決定支援。
@@ -253,11 +354,7 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
             "blocked_by": "#5 Existence Ethics",
             "reason": "入力に私益による生存構造の破壊が検知されました。いったん停止します。",
             "detected": detected_kws,
-            "safe_alternatives": [
-                "受益者と影響を受ける構造を明示して選択肢を再構成する",
-                "「誰が損するか」「それは自然な循環か」を明示的に確認する",
-                "ライフサイクル的な変化として再フレーミングできるか検討する",
-            ],
+            "safe_alternatives": _build_existence_alternatives(detected_kws),
         }
 
     # --- build report ---
@@ -323,11 +420,7 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
             "品質/安全への影響",
             "（必要なら）環境負荷（計算量/端末負荷）",
         ],
-        "next_questions": [
-            "成功の定義は？（数字で言える？）",
-            "失敗した時、最悪どこまで起きる？",
-            "影響を受ける人は誰？（チーム外も含む）",
-        ],
+        "next_questions": _build_next_questions(existence_analysis, constraints),
         "existence_analysis": existence_analysis,
     }
 

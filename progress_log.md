@@ -1,6 +1,34 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-02-28 (session 7 — 動的 next_questions + blocked 代替案の具体化)
+
+### Goal
+- A: `next_questions` を existence_analysis 結果に応じて動的生成
+- B: No-Go #5 blocked 時の `safe_alternatives` をキーワード固有に具体化
+
+### Done
+- `aicw/decision.py`:
+  - `_DESTRUCTION_ALTERNATIVES`: HARD/SOFT 全キーワード（23件）→ 再フレーミング提案の辞書
+  - `_EXISTENCE_ALTERNATIVES_STANDARD`: 標準代替案 3 件（定数化）
+  - `_build_existence_alternatives(detected_kws)`: 先頭 2 件のキーワード固有提案 + 標準 3 件
+  - `_build_next_questions(existence_analysis, constraints)`: 最大 6 件を動的生成
+    - 常時: 成功の定義 / 最悪シナリオ
+    - 受益者不明 → 受益者を尋ねる
+    - 構造不明 → 構造を尋ねる / 構造既知 → チーム外への影響を尋ねる
+    - distortion_risk == medium → 誰の私益か
+    - judgment == lifecycle → 移行支援計画
+    - impact_score >= 4 (且つ上記以外) → 緩和策
+    - 制約なし → 制約を明示するよう促す
+  - `build_decision_report()`: static を両関数で置換
+- `aicw/schema.py`: `next_questions` に description を追加
+- `tests/test_p0_dynamic.py`: 31 テスト新規作成 (TestDynamicNextQuestions 18件 / TestBlockedAlternatives 13件)
+
+### Test Results
+- 276 tests PASS (245 → 276, +31)
+
+---
+
 ## 2026-02-28 (session 6 — SOFT拡張 + P3)
 
 ### Goal
