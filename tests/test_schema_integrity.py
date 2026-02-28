@@ -248,16 +248,14 @@ class TestDecisionBriefSchema(unittest.TestCase):
         self.assertIn("生態", ea["question_2_affected_structures"])
 
     def test_existence_analysis_detects_destruction_keyword(self):
-        # 破壊系キーワードを含む場合、judgment が self_interested_destruction か高リスクになること
+        # 破壊系キーワードを含む場合、No-Go #5 で block されること（B: No-Go #5 の検証）
         report = build_decision_report({
             "situation": "競合を潰す方針を決めたい",
             "constraints": [],
             "options": ["案A", "案B", "案C"],
         })
-        self.assertEqual("ok", report["status"])
-        ea = report["existence_analysis"]
-        self.assertEqual("self_interested_destruction", ea["question_3_judgment"])
-        self.assertEqual("high", ea["distortion_risk"])
+        self.assertEqual("blocked", report["status"])
+        self.assertEqual("#5 Existence Ethics", report["blocked_by"])
 
     def test_existence_analysis_detects_lifecycle_keyword(self):
         # ライフサイクル系キーワードを含む場合、judgment が lifecycle になること
