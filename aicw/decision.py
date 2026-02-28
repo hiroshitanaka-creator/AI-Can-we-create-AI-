@@ -8,19 +8,46 @@ from .safety import guard_text, scan_manipulation
 # ---------------------------------------------------------------------------
 # 生存構造倫理原則（Existence Ethics Principle）
 # ---------------------------------------------------------------------------
-# 生存構造の5層キーワード
+# 生存構造の5層キーワード（P2b: 拡充済み）
 _EXISTENCE_STRUCTURE_KEYWORDS: Dict[str, List[str]] = {
-    "個人": ["個人", "本人", "自分", "プライバシー", "尊厳", "健康", "私", "当事者"],
-    "関係": ["家族", "コミュニティ", "信頼", "チーム", "組織", "同僚", "顧客", "パートナー", "関係者"],
-    "社会": ["社会", "制度", "公平", "多様性", "民主", "法律", "規制", "市場", "業界"],
-    "認知": ["自律", "判断", "思考", "意思決定", "自由", "考え", "選択"],
-    "生態": ["環境", "自然", "持続可能", "生態", "エネルギー", "資源"],
+    "個人": [
+        "個人", "本人", "自分", "プライバシー", "尊厳", "健康", "私", "当事者",
+        "生活", "権利", "自己", "身体", "人権", "感情",
+    ],
+    "関係": [
+        "家族", "コミュニティ", "信頼", "チーム", "組織", "同僚", "顧客", "パートナー", "関係者",
+        "友人", "仲間", "ユーザー", "クライアント", "メンバー", "ステークホルダー", "住民",
+    ],
+    "社会": [
+        "社会", "制度", "公平", "多様性", "民主", "法律", "規制", "市場", "業界",
+        "雇用", "労働", "文化", "教育", "公共", "インフラ", "経済",
+    ],
+    "認知": [
+        "自律", "判断", "思考", "意思決定", "自由", "考え", "選択",
+        "知識", "学習", "記憶", "情報", "表現",
+    ],
+    "生態": [
+        "環境", "自然", "持続可能", "生態", "エネルギー", "資源",
+        "生命", "水", "土地", "気候", "廃棄", "循環",
+    ],
 }
 
-# 私益による破壊を示すキーワード
-_DESTRUCTION_KEYWORDS: List[str] = [
-    "破壊", "潰す", "排除", "独占", "支配", "奪う", "封じる", "妨害", "阻止",
-    "蹴落とす", "つぶす", "妨げる",
+# P2a: 破壊キーワードを2層に分割
+# HARD: 文脈によらず常に私益的破壊を示す
+_HARD_DESTRUCTION_KEYWORDS: List[str] = [
+    "破壊", "潰す", "つぶす", "蹴落とす", "独占", "支配", "奪う", "壊滅", "抹消", "消滅", "制圧",
+]
+
+# SOFT: 単体では合法・正当なユースケースもある
+#   → _SAFE_TARGET_KEYWORDS と共存するテキストでは破壊と見なさない
+_SOFT_DESTRUCTION_KEYWORDS: List[str] = [
+    "排除", "封じる", "妨害", "阻止", "妨げる",
+]
+
+# SAFE_TARGET: SOFT キーワードと組み合わせても問題ない対象語（リスク除去・事故防止など）
+_SAFE_TARGET_KEYWORDS: List[str] = [
+    "リスク", "課題", "問題", "バグ", "エラー", "事故", "被害", "災害",
+    "漏洩", "違反", "不正", "欠陥", "障害", "ミス", "失敗",
 ]
 
 # 自然なライフサイクルを示すキーワード
@@ -61,8 +88,16 @@ def _analyze_existence(
         if not detected_structures:
             detected_structures = ["不明（入力に affected_structures を追加すると精度が上がります）"]
 
-    # Q3: 自然な循環か、私益による破壊か
-    has_destruction = any(kw in all_text for kw in _DESTRUCTION_KEYWORDS)
+    # Q3: 自然な循環か、私益による破壊か（P2a: 2層判定）
+    # HARD: 文脈不問で破壊
+    has_hard_destruction = any(kw in all_text for kw in _HARD_DESTRUCTION_KEYWORDS)
+    # SOFT: 安全対象語が同テキストに存在する場合は除外
+    has_safe_target = any(kw in all_text for kw in _SAFE_TARGET_KEYWORDS)
+    has_soft_destruction = (
+        any(kw in all_text for kw in _SOFT_DESTRUCTION_KEYWORDS)
+        and not has_safe_target
+    )
+    has_destruction = has_hard_destruction or has_soft_destruction
     has_lifecycle = any(kw in all_text for kw in _LIFECYCLE_KEYWORDS)
 
     if has_destruction and not has_lifecycle:
@@ -191,13 +226,18 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
 
     # --- No-Go #5: existence ethics guard ---
     # existence_analysis を早期に計算し、私益による破壊を止める
+    # ※ options_in（ユーザー提供分のみ）を渡す。デフォルト補完後の options には
+    #   "失敗を減らす" 等のシステム語が含まれ SAFE_TARGET 判定が汚染されるため。
     existence_analysis = _analyze_existence(
-        situation, constraints, options,
+        situation, constraints, options_in,
         beneficiaries_in, affected_structures_in,
     )
     if existence_analysis["question_3_judgment"] == "self_interested_destruction":
         all_text = " ".join([situation] + constraints + options)
-        detected_kws = [kw for kw in _DESTRUCTION_KEYWORDS if kw in all_text]
+        detected_kws = (
+            [kw for kw in _HARD_DESTRUCTION_KEYWORDS if kw in all_text]
+            + [kw for kw in _SOFT_DESTRUCTION_KEYWORDS if kw in all_text]
+        )
         return {
             "status": "blocked",
             "blocked_by": "#5 Existence Ethics",

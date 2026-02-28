@@ -1,6 +1,41 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-02-28 (session 5 — P2)
+
+### Goal
+- P2a: 破壊キーワードの精度向上（HARD/SOFT 2層 + SAFE_TARGET ホワイトリスト）
+- P2b: 5層構造キーワードの拡充
+
+### Done
+- `aicw/decision.py`:
+  - `_DESTRUCTION_KEYWORDS` を2層に分割:
+    - `_HARD_DESTRUCTION_KEYWORDS`: 文脈不問で常に破壊を示す語
+      （破壊, 潰す, つぶす, 蹴落とす, 独占, 支配, 奪う, 壊滅, 抹消, 消滅, 制圧）
+    - `_SOFT_DESTRUCTION_KEYWORDS`: 合法/正当なユースケースもある語
+      （排除, 封じる, 妨害, 阻止, 妨げる）
+  - `_SAFE_TARGET_KEYWORDS` 追加: SOFT と同テキストに存在する場合は破壊と見なさない
+    （リスク, 課題, 問題, バグ, エラー, 事故, 被害, 災害, 漏洩, 違反, 不正, 欠陥, 障害, ミス, 失敗）
+  - `_analyze_existence()` の Q3 判定ロジックを2層対応に更新
+  - バグ修正: `_analyze_existence` に `options_in`（ユーザー提供分のみ）を渡すよう変更
+    → デフォルト選択肢 "A: 安全側（失敗を減らす）" の "失敗" が SAFE_TARGET を汚染する問題を解消
+  - `_EXISTENCE_STRUCTURE_KEYWORDS` を拡充（P2b）:
+    - 個人: + 生活, 権利, 自己, 身体, 人権, 感情
+    - 関係: + 友人, 仲間, ユーザー, クライアント, メンバー, ステークホルダー, 住民
+    - 社会: + 雇用, 労働, 文化, 教育, 公共, インフラ, 経済
+    - 認知: + 知識, 学習, 記憶, 情報, 表現
+    - 生態: + 生命, 水, 土地, 気候, 廃棄, 循環
+- `tests/test_p0_existence.py`:
+  - `TestP2a_KeywordPrecision` 追加（20件）
+  - `TestP2b_StructureKeywordExpansion` 追加（14件）
+- 全 219 テスト PASS
+
+### Key Decision: options_in vs options for existence analysis
+- Q3 判定には「ユーザーが書いたテキスト」のみを使う
+- デフォルト補完後の `options` にはシステム語が混在するため `options_in` のみを渡す
+
+---
+
 ## 2026-02-27 (session 4)
 
 ### Goal
