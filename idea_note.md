@@ -8,29 +8,29 @@
   - Notes: 永続ログには「候補ID（ハッシュ）」「落選理由コード」「根拠ID」「最終選定理由」だけ残す案
   - Status: backlog
 
-- [ ] (2026-02-22) Idea: Po_coreに持ち込める“決定支援カーネル”を小さく切り出す
+- [x] (2026-02-22) Idea: Po_coreに持ち込める”決定支援カーネル”を小さく切り出す
   - Source: AI
-  - Why: このリポジトリの成果をPo_coreへ“使える形”で移植しやすくするため
-  - Notes: 入力（状況/制約/選択肢）→出力（候補+理由+反証+不確実性+外部性）を固定フォーマット化する
-  - Status: backlog
+  - Why: このリポジトリの成果をPo_coreへ”使える形”で移植しやすくするため
+  - Notes: bridge/hiroshitanaka_philosopher.py として完成（2026-02-28 session 9）
+  - Status: done
 
-- [ ] (2026-02-22) Idea: 地位差分テスト用の小さな固定データセットを作る
+- [x] (2026-02-22) Idea: 地位差分テスト用の小さな固定データセットを作る
   - Source: AI
   - Why: Status-invariantをテストで保証するため
-  - Notes: 「同一内容＋肩書だけ違う」ペアを10→100へ拡張
-  - Status: backlog
+  - Notes: 100ケース（10シナリオ × 10ステータスペア）を tests/test_p0_status_diff.py に実装済み
+  - Status: done
 
-- [ ] (2026-02-22) Idea: decision_request/decision_brief のJSON“項目名チェック”スクリプトを追加
+- [x] (2026-02-22) Idea: decision_request/decision_brief のJSON”項目名チェック”スクリプトを追加
   - Source: AI
   - Why: JSONのカンマミス以外にも、項目名ミスを早期に発見できる
-  - Notes: 依存なし（標準ライブラリ）で簡易バリデータ可能
-  - Status: backlog
+  - Notes: scripts/validate_request.py + aicw/schema.py として実装済み（exit code 0/1/2）
+  - Status: done
 
 - [ ] (2026-02-22) Idea: Markdown入力アダプタ（Markdown→decision_request.v0 JSON変換）を後付けする
   - Source: AI
   - Why: JSON編集が苦手でも使えるようにする（ただしcanonicalはJSONのまま）
-  - Notes: 契約は壊さず“入口を増やす”だけ
-  - Status: backlog
+  - Notes: 契約は壊さず”入口を増やす”だけ
+  - Status: backlog → 実装予定（session 9）
 
 - [ ] (2026-02-22) Idea:リスクと改善提案
 　- 誤検知の扱い

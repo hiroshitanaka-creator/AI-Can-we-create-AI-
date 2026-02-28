@@ -265,6 +265,17 @@ class HiroshiTanaka(_BASE):
                     "constraints": ctx.get("constraints", []),
                     "options":     ctx.get("options", []),
                 })
+                # #5 Existence Ethics でブロックされた場合は判定を明示的に設定
+                if report.get("status") == "blocked" and report.get("blocked_by") == "#5 Existence Ethics":
+                    return {
+                        "q1_beneficiaries":      ["不明（私益による破壊パターン検知のため停止）"],
+                        "q2_affected_structures": [],
+                        "q3_judgment":            "self_interested_destruction",
+                        "distortion_risk":        "high",
+                        "po_assessment":          "high_impact",
+                        "germination_condition":  self._identify_germination_condition(prompt),
+                        "source": "aicw_blocked",
+                    }
                 aicw_ea = report.get("existence_analysis", {})
                 return {
                     "q1_beneficiaries":      aicw_ea.get("question_1_beneficiaries", ["不明"]),

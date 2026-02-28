@@ -1,6 +1,44 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-02-28 (session 9 — 整理 + Markdown アダプタ + bridge テスト)
+
+### Goal
+- A: guideline.md / idea_note.md を現状に同期（完了済みを [x] に）
+- B: Markdown 入力アダプタ（scripts/md_adapter.py）を実装
+- C: bridge/hiroshitanaka_philosopher.py のユニットテスト（tests/test_bridge.py）を追加
+- D: test_p0_dynamic.py を pytest → unittest 標準ライブラリに変換（前セッションの残課題）
+
+### Done
+- `tests/test_p0_dynamic.py`:
+  - `import pytest` を削除、`import unittest` に変更
+  - 4クラス（TestDynamicNextQuestions / TestBlockedAlternatives / TestDynamicUncertainties / TestDynamicCounterarguments）を `unittest.TestCase` に変更
+  - 標準ライブラリのみ方針に準拠（外部依存なし）
+- `guideline.md` Current Next Actions:
+  - P2a/P2b（キーワード拡充）/ P3（impact_score）/ SOFT拡張 / 動的生成4種 / bridge を [x] に更新
+  - 残タスクとして Markdown アダプタ / bridge テストを追加
+- `idea_note.md`:
+  - Po_core カーネル / 地位差分テスト / JSON バリデータを [x] に更新
+  - Markdown アダプタを「実装予定（session 9）」に更新
+- `scripts/md_adapter.py`（新規）:
+  - Markdown → decision_request.v0 JSON 変換アダプタ
+  - フィールド: situation（必須）/ constraints / options / beneficiaries / affected_structures
+  - `#` セクションヘッダ、`-` / `*` 箇条書き、空行・未知セクション無視
+  - exit code 0/1/2（成功 / situation 空 / 引数エラー）
+  - パイプ対応: `cat request.md | python scripts/md_adapter.py | python scripts/brief.py`
+- `tests/test_md_adapter.py`（新規）: 20件追加
+  - TestConvertSituation (4件) / TestConvertLists (6件) / TestConvertFullInput (1件) / TestConvertEdgeCases (4件) / TestCLI (4件)
+- `bridge/hiroshitanaka_philosopher.py`:
+  - バグ修正: aicw が #5 Existence Ethics でブロックした場合に `q3_judgment` を "self_interested_destruction" に設定（以前は "unclear" のままになっていた）
+- `tests/test_bridge.py`（新規）: 22件追加
+  - TestHiroshiTanakaBasic (6件) / TestQuestionLegitimacy (3件) / TestExistenceStructure (4件) / TestArroganceCheck (3件) / TestMarginsAndResonance (5件) / TestContextPassthrough (2件) - 傲慢さマーカーのテストプロンプトを「絶対に」に修正（「間違いなく」はマーカー外）
+
+### Test Results
+- 346 tests PASS (304 → 346, +42)
+
+---
+
+
 ## 2026-02-28 (session 8 — uncertainties + counterarguments の動的化)
 
 ### Goal
