@@ -8,7 +8,7 @@ D: _build_counterarguments の動的生成テスト
 """
 from __future__ import annotations
 
-import pytest
+import unittest
 from aicw.decision import (
     _build_next_questions,
     _build_existence_alternatives,
@@ -45,7 +45,7 @@ def _ea(
 # A: TestDynamicNextQuestions
 # ===========================================================================
 
-class TestDynamicNextQuestions:
+class TestDynamicNextQuestions(unittest.TestCase):
 
     def test_base_questions_always_present(self):
         """先頭2件の質問は常に含まれる"""
@@ -213,7 +213,7 @@ class TestDynamicNextQuestions:
 # B: TestBlockedAlternatives
 # ===========================================================================
 
-class TestBlockedAlternatives:
+class TestBlockedAlternatives(unittest.TestCase):
 
     def test_hard_keyword_generates_specific_alternative(self):
         """HARD キーワード 支配 → キーワード固有のフレーミング提案が含まれる"""
@@ -321,7 +321,7 @@ class TestBlockedAlternatives:
 # C: TestDynamicUncertainties
 # ===========================================================================
 
-class TestDynamicUncertainties:
+class TestDynamicUncertainties(unittest.TestCase):
 
     def test_base_uncertainty_always_present(self):
         """「成功の定義」は常に含まれる"""
@@ -428,7 +428,7 @@ class TestDynamicUncertainties:
 # D: TestDynamicCounterarguments
 # ===========================================================================
 
-class TestDynamicCounterarguments:
+class TestDynamicCounterarguments(unittest.TestCase):
 
     def test_base_counterargument_always_present(self):
         """「前提が足りない」は常に含まれる"""

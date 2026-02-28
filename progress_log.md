@@ -1,6 +1,76 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-02-28 (session 9 — 整理 + Markdown アダプタ + bridge テスト)
+
+### Goal
+- A: guideline.md / idea_note.md を現状に同期（完了済みを [x] に）
+- B: Markdown 入力アダプタ（scripts/md_adapter.py）を実装
+- C: bridge/hiroshitanaka_philosopher.py のユニットテスト（tests/test_bridge.py）を追加
+- D: test_p0_dynamic.py を pytest → unittest 標準ライブラリに変換（前セッションの残課題）
+
+### Done
+- `tests/test_p0_dynamic.py`:
+  - `import pytest` を削除、`import unittest` に変更
+  - 4クラス（TestDynamicNextQuestions / TestBlockedAlternatives / TestDynamicUncertainties / TestDynamicCounterarguments）を `unittest.TestCase` に変更
+  - 標準ライブラリのみ方針に準拠（外部依存なし）
+- `guideline.md` Current Next Actions:
+  - P2a/P2b（キーワード拡充）/ P3（impact_score）/ SOFT拡張 / 動的生成4種 / bridge を [x] に更新
+  - 残タスクとして Markdown アダプタ / bridge テストを追加
+- `idea_note.md`:
+  - Po_core カーネル / 地位差分テスト / JSON バリデータを [x] に更新
+  - Markdown アダプタを「実装予定（session 9）」に更新
+- `scripts/md_adapter.py`（新規）:
+  - Markdown → decision_request.v0 JSON 変換アダプタ
+  - フィールド: situation（必須）/ constraints / options / beneficiaries / affected_structures
+  - `#` セクションヘッダ、`-` / `*` 箇条書き、空行・未知セクション無視
+  - exit code 0/1/2（成功 / situation 空 / 引数エラー）
+  - パイプ対応: `cat request.md | python scripts/md_adapter.py | python scripts/brief.py`
+- `tests/test_md_adapter.py`（新規）: 20件追加
+  - TestConvertSituation (4件) / TestConvertLists (6件) / TestConvertFullInput (1件) / TestConvertEdgeCases (4件) / TestCLI (4件)
+- `bridge/hiroshitanaka_philosopher.py`:
+  - バグ修正: aicw が #5 Existence Ethics でブロックした場合に `q3_judgment` を "self_interested_destruction" に設定（以前は "unclear" のままになっていた）
+- `tests/test_bridge.py`（新規）: 22件追加
+  - TestHiroshiTanakaBasic (6件) / TestQuestionLegitimacy (3件) / TestExistenceStructure (4件) / TestArroganceCheck (3件) / TestMarginsAndResonance (5件) / TestContextPassthrough (2件) - 傲慢さマーカーのテストプロンプトを「絶対に」に修正（「間違いなく」はマーカー外）
+
+### Test Results
+- 346 tests PASS (304 → 346, +42)
+
+---
+
+
+## 2026-02-28 (session 10 — P1三本柱: disclaimer + impact_map + three_review)
+
+### Goal
+- A: AI限界宣言（disclaimer）を全 ok 出力に強制挿入
+- B: 影響範囲マップ（impact_map）を decision_brief に追加
+- C: 3者レビューCLI（scripts/three_review.py）を実装
+
+### Done
+- `aicw/decision.py`:
+  - `_DISCLAIMER` 定数: 「⚠ この出力は参考情報です。最終判断は人間が行ってください。AIは…」
+    - 「必ず」を除去（manipulation warn 発火を回避）
+  - `_build_impact_map(existence_analysis)`: 受益者 × 影響構造 の Markdown テーブル生成
+    - 受益者・構造が判明している場合のみテーブル化、不明時はメッセージ返却
+  - `build_decision_report()`: `impact_map` / `disclaimer` フィールドを ok 時に追加
+  - `format_report()`: `[Impact Map]` / `[Disclaimer]` セクションを末尾に追加
+- `aicw/schema.py`: `impact_map` / `disclaimer` フィールドを DECISION_BRIEF_V0 に追記
+- `scripts/three_review.py`（新規）:
+  - Builder（推進者）/ Skeptic（懐疑論者）/ User（最終判断者）の 3 視点を自動生成
+  - impact_map・next_questions・disclaimer を User セクションに組み込み
+  - blocked 時は ⛔ BLOCKED セクションのみ表示
+  - パイプ対応: `cat req.md | python scripts/md_adapter.py | python scripts/three_review.py`
+  - exit code 0/1/2（ok / blocked / エラー）
+- `tests/test_p1_features.py`（新規）: 32件追加
+  - TestDisclaimer (5件) / TestImpactMap (8件)
+  - TestThreeReviewStructure (6件) / TestThreeReviewBuilder (3件)
+  - TestThreeReviewSkeptic (3件) / TestThreeReviewUser (4件) / TestThreeReviewBlocked (3件)
+
+### Test Results
+- 378 tests PASS (346 → 378, +32)
+
+---
+
 ## 2026-02-28 (session 8 — uncertainties + counterarguments の動的化)
 
 ### Goal

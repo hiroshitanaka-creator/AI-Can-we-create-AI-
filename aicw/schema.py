@@ -130,6 +130,16 @@ DECISION_BRIEF_V0: Dict[str, Any] = {
             "required": False,
             "description": "warn レベルの検知（DLP[IP_LIKE, POSTAL_CODE_LIKE] / 操作表現 warn）",
         },
+        "impact_map": {
+            "type": "str",
+            "required_if": "status == ok",
+            "description": "受益者 × 影響構造 の影響範囲マップ（Markdown テーブル）。人間が？を埋めて使う叩き台",
+        },
+        "disclaimer": {
+            "type": "str",
+            "required_if": "status == ok",
+            "description": "AI限界宣言。最終判断は人間が行うことを明示する固定フッター",
+        },
         # --- blocked 時のみ ---
         "blocked_by":        {"type": "str",       "required_if": "status == blocked"},
         "reason":            {"type": "str",       "required_if": "status == blocked"},

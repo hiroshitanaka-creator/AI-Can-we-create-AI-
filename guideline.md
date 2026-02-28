@@ -122,8 +122,22 @@ No-Go (#3/#4/#6) はこの原則の**派生**：
 - [x] A: existence_analysis → selection.explanation / reason_codes に接続
 - [x] EXISTENCE_RISK_LOW / MEDIUM / LIFECYCLE_OK を schema に追加
 - [x] tests/test_p0_existence.py 追加（26件）
-- [ ] P2: 5層構造キーワードの拡充（生存構造の自動検出精度を上げる）
-- [ ] P2: 破壊キーワードの精度向上（文脈依存の誤検知を減らす）
+- [x] P2a: 破壊キーワードの精度向上（HARD/SOFT 2層 + SAFE_TARGET ホワイトリスト）
+- [x] P2b: 5層構造キーワードの拡充（個人/関係/社会/認知/生態 各層に追加）
+- [x] P3: 影響スコア（impact_score）の実装と推奨オーバーライド（>= 6 → A に引き上げ）
+- [x] SOFT キーワード拡張（締め出す/封殺/黙らせる/抑え込む）+ HARD/SAFE_TARGET 追加
+- [x] 動的 next_questions（existence_analysis 結果に応じて最大6件を生成）
+- [x] No-Go #5 blocked 時の safe_alternatives をキーワード固有に具体化（全 23 キーワード）
+- [x] 動的 uncertainties（existence_analysis に応じて最大5件を生成）
+- [x] 動的 counterarguments（existence_analysis に応じて最大4件を生成）
+- [x] bridge/hiroshitanaka_philosopher.py 作成（Po_core 用哲学者モジュール）
+- [x] test_p0_dynamic.py を pytest → unittest 標準ライブラリに変換（304 tests PASS）
+- [x] Markdown 入力アダプタ（scripts/md_adapter.py: MD → decision_request.v0 JSON 変換）
+- [x] tests/test_bridge.py 追加（HiroshiTanaka.reason() のユニットテスト、22件）
+- [x] bridge: #5 blocked 時に q3_judgment を "self_interested_destruction" に設定するバグ修正
+- [x] disclaimer（AI限界宣言）を全 ok 出力に強制挿入
+- [x] impact_map（影響範囲マップ）を decision_brief に追加（受益者×影響構造 Markdown テーブル）
+- [x] scripts/three_review.py（3者レビューCLI: Builder/Skeptic/User）を実装
 
 ## How to run / test
 
