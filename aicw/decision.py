@@ -32,22 +32,25 @@ _EXISTENCE_STRUCTURE_KEYWORDS: Dict[str, List[str]] = {
     ],
 }
 
-# P2a: 破壊キーワードを2層に分割
+# P2a/P2c: 破壊キーワードを2層に分割
 # HARD: 文脈によらず常に私益的破壊を示す
 _HARD_DESTRUCTION_KEYWORDS: List[str] = [
     "破壊", "潰す", "つぶす", "蹴落とす", "独占", "支配", "奪う", "壊滅", "抹消", "消滅", "制圧",
+    "排斥", "乗っ取る", "踏みにじる",
 ]
 
 # SOFT: 単体では合法・正当なユースケースもある
 #   → _SAFE_TARGET_KEYWORDS と共存するテキストでは破壊と見なさない
 _SOFT_DESTRUCTION_KEYWORDS: List[str] = [
     "排除", "封じる", "妨害", "阻止", "妨げる",
+    "締め出す", "封殺", "黙らせる", "抑え込む",
 ]
 
 # SAFE_TARGET: SOFT キーワードと組み合わせても問題ない対象語（リスク除去・事故防止など）
 _SAFE_TARGET_KEYWORDS: List[str] = [
     "リスク", "課題", "問題", "バグ", "エラー", "事故", "被害", "災害",
     "漏洩", "違反", "不正", "欠陥", "障害", "ミス", "失敗",
+    "脅威", "感染", "ノイズ", "アラート",
 ]
 
 # 自然なライフサイクルを示すキーワード
@@ -117,12 +120,19 @@ def _analyze_existence(
         distortion_risk = "low"
         judgment_text = "明確な破壊・循環パターンは未検知。歪みのリスクは現時点で低いと評価。"
 
+    # P3: 影響スコア（0-8）
+    # 検出された構造層数 + リスクボーナス
+    structure_count = len([s for s in detected_structures if "不明" not in s])
+    risk_bonus = {"low": 0, "medium": 3, "high": 5}.get(distortion_risk, 0)
+    impact_score = min(structure_count + risk_bonus, 8)
+
     return {
         "question_1_beneficiaries": beneficiaries,
         "question_2_affected_structures": detected_structures,
         "question_3_judgment": judgment,
         "distortion_risk": distortion_risk,
         "judgment_text": judgment_text,
+        "impact_score": impact_score,
     }
 
 
@@ -268,6 +278,13 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
         explanation += " 生存構造への歪みリスク: 低（明確な破壊パターン未検知）。"
         reason_codes = reason_codes + ["EXISTENCE_RISK_LOW"]
 
+    # P3: 影響スコアが高い場合は推奨を A（安全側）に引き上げ
+    impact_score = existence_analysis.get("impact_score", 0)
+    if impact_score >= 6 and rec_id != "A":
+        rec_id = "A"
+        explanation += f" 影響スコア({impact_score}): 生存構造への影響が複数層に渡るため A（安全側）に引き上げ。"
+        reason_codes = reason_codes + ["EXISTENCE_IMPACT_OVERRIDE"]
+
     candidates = [
         {"id": cid, "summary": options[i], "not_selected_reason_code": (
             "N/A" if rec_id == cid else _NOT_SELECTED_CODES[rec_id][cid]
@@ -410,6 +427,7 @@ def format_report(report: Dict[str, Any]) -> str:
         lines.append(f"- Q1 受益者: {', '.join(ea.get('question_1_beneficiaries', []))}")
         lines.append(f"- Q2 影響構造: {', '.join(ea.get('question_2_affected_structures', []))}")
         lines.append(f"- Q3 判定: {ea.get('question_3_judgment')} / 歪みリスク: {ea.get('distortion_risk')}")
+        lines.append(f"- 影響スコア: {ea.get('impact_score', 0)} / 8")
         lines.append(f"- 説明: {ea.get('judgment_text')}")
 
     warnings = report.get("warnings") or []

@@ -1,6 +1,32 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-02-28 (session 6 — SOFT拡張 + P3)
+
+### Goal
+- SOFT キーワード拡張（締め出す/封殺/黙らせる/抑え込む）+ HARD 追加 + SAFE_TARGET 追加
+- P3: 影響スコア（impact_score）の実装と推奨オーバーライド
+
+### Done
+- `aicw/decision.py`:
+  - HARD 追加: 排斥, 乗っ取る, 踏みにじる
+  - SOFT 追加: 締め出す, 封殺, 黙らせる, 抑え込む
+  - SAFE_TARGET 追加: 脅威, 感染, ノイズ, アラート
+  - P3: `_analyze_existence()` に `impact_score` を追加
+    計算式: min(構造層数 + {low:0, medium:3, high:5}[risk], 8)
+  - P3: impact_score >= 6 かつ rec_id != "A" → A に引き上げ + `EXISTENCE_IMPACT_OVERRIDE`
+  - `format_report()` に「影響スコア: X / 8」を追加
+- `aicw/schema.py`: EXISTENCE_IMPACT_OVERRIDE・impact_score を追加
+- `tests/test_p0_existence.py`:
+  - `TestSoftKeywordExpansion` 追加（12件）
+  - `TestP3_ImpactScore` 追加（14件）
+- 全 245 テスト PASS
+
+### Scoring (P3)
+impact_score = min(構造層数 + risk_bonus, 8) ／ threshold=6 で A にオーバーライド
+
+---
+
 ## 2026-02-28 (session 5 — P2)
 
 ### Goal

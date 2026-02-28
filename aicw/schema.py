@@ -118,6 +118,7 @@ DECISION_BRIEF_V0: Dict[str, Any] = {
                 },
                 "distortion_risk":  {"type": "str",  "enum": ["low", "medium", "high"]},
                 "judgment_text":    {"type": "str",  "description": "判定の根拠説明"},
+                "impact_score":     {"type": "int",  "description": "影響スコア 0-8（P3）。構造層数 + リスクボーナス"},
             },
         },
         "warnings": {
@@ -146,10 +147,11 @@ DECISION_BRIEF_V0: Dict[str, Any] = {
             "DEADLINE_DRIVEN":       "制約に「期限」「納期」が含まれる",
             "URGENCY_FIRST":         "制約に「至急」が含まれる",
             "NO_CONSTRAINTS":        "制約なし（デフォルトバランス）",
-            # 生存構造倫理系（#5 Existence Ethics）
-            "EXISTENCE_RISK_LOW":    "生存構造への歪みリスクが低い（明確な破壊パターン未検知）",
-            "EXISTENCE_RISK_MEDIUM": "生存構造への影響に注意（ライフサイクルと破壊の両方を検知）",
-            "EXISTENCE_LIFECYCLE_OK":"自然なライフサイクルの範囲内と判定",
+            # 生存構造倫理系（#5 Existence Ethics / P3）
+            "EXISTENCE_RISK_LOW":       "生存構造への歪みリスクが低い（明確な破壊パターン未検知）",
+            "EXISTENCE_RISK_MEDIUM":    "生存構造への影響に注意（ライフサイクルと破壊の両方を検知）",
+            "EXISTENCE_LIFECYCLE_OK":   "自然なライフサイクルの範囲内と判定",
+            "EXISTENCE_IMPACT_OVERRIDE":"影響スコアが高く推奨を A（安全側）に引き上げ（P3）",
         },
         "not_selected": {
             "N/A":                "この案が推奨",
