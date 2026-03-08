@@ -172,3 +172,12 @@ python run_demo.py
 - `0`: ok（正常出力）
 - `1`: blocked（#4 or #6 で停止）
 - `2`: 引数エラー / 不正JSON
+
+
+## Sprint Plan (2026-03, 2 weeks)
+- [x] `sprint_plan.md` を作成（優先順位付き10タスク + Week1/Week2 実行順）
+- [x] Week1 P0: ファジング基盤 + 一貫性検知
+- [x] Week1 P1: 文化差分テスト + 事後検証テンプレ + 文脈圧縮
+- [x] Week2 Task6: manipulation動的化（スコアリング + 閾値昇格）
+- [x] Week2 Task7: 不確実性マップ（Mermaid風テキスト）
+- [ ] Week2 P1/P2: manipulation動的化 + 不確実性マップ + 哲学モジュール + API契約固定

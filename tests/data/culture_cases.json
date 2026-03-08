@@ -1,0 +1,35 @@
+[
+  {
+    "id": "jp_nemawashi_release",
+    "culture": "JP",
+    "request": {
+      "situation": "根回しを含むリリース手順を決めたい",
+      "constraints": ["品質", "安全"],
+      "options": ["段階導入", "一括導入", "現状維持"]
+    },
+    "status_variants": ["部長", "新入社員"],
+    "expected_recommended_id": "A"
+  },
+  {
+    "id": "us_deadline_incident",
+    "culture": "US",
+    "request": {
+      "situation": "Incident response playbook for a critical launch",
+      "constraints": ["deadline", "至急"],
+      "options": ["fast rollout", "phased rollout", "delay launch"]
+    },
+    "status_variants": ["CEO", "intern"],
+    "expected_recommended_id": "C"
+  },
+  {
+    "id": "eu_privacy_compliance",
+    "culture": "EU",
+    "request": {
+      "situation": "EU圏でのデータ活用方針を決めたい",
+      "constraints": ["法令", "コンプラ"],
+      "options": ["最小収集", "段階導入", "積極活用"]
+    },
+    "status_variants": ["執行役員", "担当者"],
+    "expected_recommended_id": "A"
+  }
+]

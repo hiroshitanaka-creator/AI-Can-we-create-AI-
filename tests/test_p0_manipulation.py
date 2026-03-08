@@ -10,7 +10,6 @@ class TestP0Manipulation(unittest.TestCase):
     # ------------------------------------------------------------------
 
     def test_detects_warn_phrase(self):
-        # "今すぐ" は warn レベルで検知される
         s = "今" + "すぐ"
         hits = scan_manipulation("これは" + s + "やるべき")
         self.assertTrue(len(hits) >= 1)
@@ -18,7 +17,6 @@ class TestP0Manipulation(unittest.TestCase):
         self.assertIn(s, warn_phrases)
 
     def test_detects_block_phrase(self):
-        # "炎上" は block レベルで検知される
         hits = scan_manipulation("炎上させよう")
         self.assertTrue(len(hits) >= 1)
         block_phrases = [h.phrase for h in hits if h.severity == "block"]
@@ -35,24 +33,88 @@ class TestP0Manipulation(unittest.TestCase):
         self.assertEqual("block", hits[0].severity)
 
     def test_detects_multiple_severities(self):
-        # warn と block が同時に存在する場合、両方検知する
         s_warn = "必" + "ず"
         s_block = "拡" + "散"
         hits = scan_manipulation(s_warn + "して" + s_block + "せよ")
         severities = {h.severity for h in hits}
-        self.assertIn("warn", severities)
         self.assertIn("block", severities)
+
+    # ------------------------------------------------------------------
+    # スコアリング強化（Task 6）
+    # ------------------------------------------------------------------
+
+    def test_warn_score_escalates_to_block(self):
+        text = "今すぐ必ず絶対やれ"
+        hits = scan_manipulation(text)
+        self.assertTrue(hits)
+        self.assertTrue(all(h.severity == "block" for h in hits))
+
+    def test_low_warn_score_stays_warn(self):
+        text = "今すぐ確認してください"
+        hits = scan_manipulation(text)
+        self.assertTrue(hits)
+        self.assertTrue(all(h.severity == "warn" for h in hits))
+
+    def test_imperative_pattern_contributes_score(self):
+        text = "必ず実施しろ"
+        hits = scan_manipulation(text)
+        phrases = {h.phrase for h in hits}
+        self.assertIn("命令調", phrases)
+
+    def test_false_positive_guard_cases_10(self):
+        safe_cases = [
+            "可能なら今日中に確認したいです。",
+            "早めに確認できると助かります。",
+            "推奨案を比較しながら判断します。",
+            "将来的に改善できる余地があります。",
+            "根拠と不確実性を並べて検討します。",
+            "品質を保ちつつ段階導入します。",
+            "情報共有を丁寧に進めます。",
+            "候補案のメリット・デメリットを整理します。",
+            "関係者の合意形成を優先します。",
+            "問題があれば再評価します。",
+        ]
+        for text in safe_cases:
+            with self.subTest(text=text):
+                self.assertEqual([], scan_manipulation(text))
+
+    def test_detection_cases_10(self):
+        risky_cases = [
+            ("絶対に成功させる", True),
+            ("必ず従え", True),
+            ("今すぐ拡散せよ", True),
+            ("信じてついてこい", True),
+            ("間違いなくやれ", True),
+            ("炎上させる", True),
+            ("洗脳してでも達成する", True),
+            ("許せない相手を排除する", True),
+            ("今すぐ絶対実施しろ", True),
+            ("必ずやれ", True),
+        ]
+        for text, expected_hit in risky_cases:
+            with self.subTest(text=text):
+                hits = scan_manipulation(text)
+                self.assertEqual(expected_hit, len(hits) > 0)
 
     # ------------------------------------------------------------------
     # build_decision_report: block hit → ステータス "blocked"
     # ------------------------------------------------------------------
 
     def test_report_blocked_on_block_phrase_in_option(self):
-        # 選択肢に block フレーズが含まれると出力レポートでブロックされる
         req = {
             "situation": "方針を決めたい",
             "constraints": [],
             "options": ["炎" + "上させる", "穏当に対処", "保留"],
+        }
+        report = build_decision_report(req)
+        self.assertEqual("blocked", report["status"])
+        self.assertEqual("#4 Manipulation", report["blocked_by"])
+
+    def test_report_blocked_on_warn_score_escalation(self):
+        req = {
+            "situation": "対応方針を決めたい",
+            "constraints": [],
+            "options": ["今すぐ絶対必ずやれ", "慎重に進める", "保留"],
         }
         report = build_decision_report(req)
         self.assertEqual("blocked", report["status"])
@@ -63,7 +125,6 @@ class TestP0Manipulation(unittest.TestCase):
     # ------------------------------------------------------------------
 
     def test_report_ok_with_warnings_on_warn_phrase(self):
-        # 選択肢に warn フレーズが含まれると、ブロックはされず warnings が付く
         req = {
             "situation": "方針を決めたい",
             "constraints": [],
