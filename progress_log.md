@@ -405,3 +405,144 @@ impact_score = min(構造層数 + risk_bonus, 8) ／ threshold=6 で A にオー
 ### Next
 - Decision Brief の入出力を最小で確定（推奨: JSONを正 + Markdownも出す）
 - aicw/ と tests/ のファイル一覧と、run_demo.py の中身を共有してもらい、最小の生成器（JSON→Markdown）から実装する
+
+---
+
+## 2026-03-08 (session 11 — 2週間スプリント計画の具体化)
+
+### Goal
+- 上位10タスクを優先順位付きで 2週間スプリント形式に落とし込む
+- そのまま Codex で順次実装できる粒度（目的 / ファイル / DoD / 実装プロンプト / 実行順）にする
+
+### Done
+- `sprint_plan.md`（新規）:
+  - 10タスクを高→低の優先順位で明示
+  - Week1（P0/P1）と Week2（P1/P2）に分割
+  - 各タスクに目的・追加ファイル・DoD・Codex実装プロンプトを記載
+  - 実行順コマンド（対象テスト→最終回帰）を記載
+  - リスクと回避策を明記
+- `guideline.md`:
+  - `Sprint Plan (2026-03, 2 weeks)` セクションを追加
+  - 計画作成完了と Week1/Week2 の実行項目をチェックリスト化
+
+### Test Results
+- ドキュメント更新のみ（テスト未実行）
+
+## 2026-03-08 (session 12 — Week1 P0 実装: fuzz 基盤 + 一貫性検知)
+
+### Goal
+- スプリント計画 Week1 P0 の2タスクを実装する
+  - Task 1: ファジングテスト自動生成基盤
+  - Task 2: 同一入力の一貫性（自己矛盾）検知
+
+### Done
+- `scripts/gen_fuzz_cases.py`（新規）:
+  - decision_request.v0 準拠のケースを大量生成する CLI を実装
+  - `--count` / `--seed` / `--out` / `--pretty` をサポート
+  - シード固定により再現可能な出力を保証
+- `tests/data/fuzz_seed_cases.json`（新規）:
+  - ファジング基盤の初期シードケースを追加
+- `tests/test_fuzz_smoke.py`（新規）:
+  - 生成件数・必須フィールド・スキーマ整合・seed再現性・CLI挙動を検証（5件）
+- `scripts/check_consistency.py`（新規）:
+  - 同一 request を複数回実行し、report の SHA-256 が一致するか検証する CLI を実装
+  - 不一致時に top-level diff keys を表示
+  - exit code 0/1/2（一貫/非一貫/入力エラー）
+- `tests/test_consistency.py`（新規）:
+  - 一貫性判定、repeat バリデーション、CLI（stdin/不正JSON）を検証（4件）
+- `guideline.md`:
+  - Sprint Plan チェックリストの Week1 P0 を [x] に更新
+- `idea_note.md`:
+  - 「ファジング生成基盤」「自己矛盾検知」を done に更新
+
+### Test Results
+- `PYTHONPATH=. pytest -q tests/test_fuzz_smoke.py tests/test_consistency.py` → 9 passed
+- `PYTHONPATH=. pytest -q` → 387 passed
+
+## 2026-03-08 (session 13 — Week1 P1 実装: culture/postmortem/context)
+
+### Goal
+- スプリント計画 Week1 P1 の3タスクを実装する
+  - Task 3: 文化差分テストデータセット整備
+  - Task 4: 事後検証テンプレート自動生成
+  - Task 5: 文脈圧縮機能（長文入力）
+
+### Done
+- `tests/data/culture_cases.json`（新規）:
+  - JP/US/EU の3ケースを定義し、期待推奨IDと status バリアントを明示
+- `tests/test_culture_diff.py`（新規）:
+  - status 変更で recommendation / reason_codes が変わらないことを検証
+  - ケースごとの期待推奨ID（A/C/A）を検証
+- `scripts/postmortem_template.py`（新規）:
+  - decision_brief 入力から 30/60/90日チェックテンプレートを生成
+  - blocked ケース専用テンプレート（Follow-up Checklist）を実装
+  - stdin / ファイル入力対応
+- `tests/test_postmortem_template.py`（新規）:
+  - ok/blocked のテンプレ内容、CLI stdin/file、不正JSONを検証（5件）
+- `aicw/context_compress.py`（新規）:
+  - ルールベースの situation 圧縮ユーティリティ `compress_situation()` を実装
+  - キーワード優先・文字数制限・有効/無効切替を実装
+- `tests/test_context_compress.py`（新規）:
+  - 圧縮無効時の透過、短文非圧縮、キーワード優先、文字数上限、カスタムキーワードを検証（5件）
+- `aicw/__init__.py`:
+  - `compress_situation` を公開 API に追加
+- `guideline.md`:
+  - Sprint Plan チェックリストの Week1 P1 を [x] に更新
+- `idea_note.md`:
+  - 「文化差分テスト」「事後検証テンプレ」「文脈圧縮」を done に更新
+
+### Test Results
+- `PYTHONPATH=. pytest -q tests/test_culture_diff.py tests/test_postmortem_template.py tests/test_context_compress.py` → 12 passed
+- `PYTHONPATH=. pytest -q` → 399 passed
+
+## 2026-03-08 (session 14 — Week2 Task6: manipulation スコアリング強化)
+
+### Goal
+- スプリント Week2 Task6（anti-manipulation の動的チェック強化）を実装する
+
+### Done
+- `aicw/safety.py`:
+  - `scan_manipulation()` を単純一致からスコアリング方式へ拡張
+  - ルールを明文化:
+    - block phrase 検知時は即 block
+    - warn phrase + 命令調パターンの合計スコアが閾値以上で block 昇格
+    - それ以外は warn
+  - `ManipulationHit` に `score` フィールドを追加（既存互換を維持）
+  - 命令調/強制調の文脈パターンを追加（`命令調`, `強制表現`）
+- `tests/test_p0_manipulation.py`:
+  - スコア昇格（warn→block）検証を追加
+  - 低スコア warn 維持の検証を追加
+  - 文脈パターン加点の検証を追加
+  - 誤検知抑制 10 ケース（safe）を追加
+  - 検知確認 10 ケース（risky）を追加
+  - build_decision_report の昇格 block 動作検証を追加
+- `guideline.md`:
+  - Sprint Plan セクションに `Week2 Task6` 完了チェックを追加
+
+### Test Results
+- `PYTHONPATH=. pytest -q tests/test_p0_manipulation.py` → 14 passed, 20 subtests passed
+- `PYTHONPATH=. pytest -q` → 405 passed, 20 subtests passed
+
+## 2026-03-08 (session 15 — Week2 Task7: 不確実性マップ出力)
+
+### Goal
+- スプリント Week2 Task7（不確実性マップの可視化）を実装する
+
+### Done
+- `scripts/uncertainty_map.py`（新規）:
+  - decision_brief の `uncertainties` から Mermaid 風 `graph TD` を生成
+  - stdin / ファイル入力に対応
+  - ノード上限（`max_nodes`）と深さ上限（`max_depth`）を実装
+  - 重複ノード抑制（簡易循環防止）を実装
+  - 不確実性未指定時のフォールバックノードを実装
+- `tests/test_uncertainty_map.py`（新規）:
+  - ルート生成、空入力フォールバック、ノード上限、深さ2の子ノード展開を検証
+  - CLI（stdin/file/不正JSON）を検証（7件）
+- `guideline.md`:
+  - Sprint Plan セクションに `Week2 Task7` 完了チェックを追加
+- `idea_note.md`:
+  - 「不確実性マップ」アイデアを done に更新
+
+### Test Results
+- `PYTHONPATH=. pytest -q tests/test_uncertainty_map.py` → 7 passed
+- `PYTHONPATH=. pytest -q` → 412 passed, 20 subtests passed

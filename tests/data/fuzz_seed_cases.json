@@ -1,0 +1,18 @@
+[
+  {
+    "situation": "新機能の公開方針を決めたい",
+    "constraints": ["安全", "品質"],
+    "options": ["A: 安全側（失敗を減らす）", "B: バランス（段階導入）", "C: 速度側（早期実行）"]
+  },
+  {
+    "situation": "障害対応の優先順位を決めたい",
+    "constraints": ["至急"],
+    "beneficiaries": ["ユーザー", "運用チーム"],
+    "affected_structures": ["個人", "社会"]
+  },
+  {
+    "situation": "採用方針を見直したい",
+    "constraints": ["法令", "コンプラ"],
+    "asker_status": "部長"
+  }
+]

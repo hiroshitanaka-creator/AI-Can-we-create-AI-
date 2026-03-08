@@ -2,6 +2,18 @@
 > 思いつき/提案/将来の改善案のメモ。採用・保留・却下を残す。
 
 ## Backlog
+- [x] (2026-03-08) Idea: manipulation 検知をスコアリング化し warn/block を段階化する
+  - Source: Sprint Task 6
+  - Why: 単純一致の誤検知を抑えつつ、高リスク文脈は確実に block するため
+  - Notes: `aicw/safety.py` の `scan_manipulation()` を拡張し、`tests/test_p0_manipulation.py` に safe/risky 各10ケースを追加
+  - Status: done
+
+- [x] (2026-03-08) Idea: 10タスクを2週間スプリントとして優先順位付きに固定する
+  - Source: User
+  - Why: Codexで順次実装できる実行順とDoDを先に固定し、手戻りを減らすため
+  - Notes: `sprint_plan.md` を作成し、Week1/Week2 の順で実装可能な形に整理
+  - Status: done
+
 - [ ] (2026-02-22) Idea: 「候補案の全文」は基本保存しない（その場で表示のみ）
   - Source: AI
   - Why: Privacyリスクを最小化しつつ、Explainable selection（なぜ選ばれたか）を保つため
@@ -56,23 +68,23 @@
 
 ### カテゴリ1: 検証・テスト強化
 
-- [ ] (2026-02-28) Idea: 決定リクエストのファジングテスト自動生成フレームワーク
+- [x] (2026-02-28) Idea: 決定リクエストのファジングテスト自動生成フレームワーク
   - Source: Grok
   - Why: 手動テストでは到達できない「矛盾制約」「超長文脈」「微妙な誘導文」を検知し、DLP・status-invariant・anti-manipulation の信頼性を指数関数的に高める
-  - Notes: Python標準ライブラリのみで実装可能（random + template変異）。生成ケース数は1万〜10万を想定。地位差分テストの自動拡張とも相補的
-  - Status: backlog
+  - Notes: `scripts/gen_fuzz_cases.py` + `tests/test_fuzz_smoke.py` + `tests/data/fuzz_seed_cases.json` として実装済み（2026-03-08 session 12）
+  - Status: done
 
-- [ ] (2026-02-28) Idea: 決定結果の「自己矛盾検知」自動チェックモジュール
+- [x] (2026-02-28) Idea: 決定結果の「自己矛盾検知」自動チェックモジュール
   - Source: Grok
   - Why: 同一状況で異なる結論が出ないことをコードレベルで保証するため
-  - Notes: 同一 decision_request に対して複数回実行し、出力ハッシュが一致しない場合に警告。決定論的設計の検証にもなる
-  - Status: backlog
+  - Notes: `scripts/check_consistency.py` + `tests/test_consistency.py` として実装済み（2026-03-08 session 12）
+  - Status: done
 
-- [ ] (2026-02-28) Idea: 「文化差分テスト」データセットの作成
+- [x] (2026-02-28) Idea: 「文化差分テスト」データセットの作成
   - Source: Grok
   - Why: Status-invariant を守りつつ、日本企業特有の「根回し文化」や「集団調和」を正しく Context-dependent に扱えるか検証するため
-  - Notes: 日米欧の同じ状況を3パターン用意。status-invariant テストの「文化差分版」として位置づけ
-  - Status: backlog
+  - Notes: `tests/data/culture_cases.json` + `tests/test_culture_diff.py` として実装済み（2026-03-08 session 13）
+  - Status: done
 
 ### カテゴリ2: 哲学的・説明性向上
 
@@ -88,11 +100,11 @@
   - Notes: 簡易論理矛盾チェック＋哲学キーワードマッチ。Po_core の Skeptic 役として組み込める
   - Status: backlog
 
-- [ ] (2026-02-28) Idea: 「不確実性マップ」自動生成機能
+- [x] (2026-02-28) Idea: 「不確実性マップ」自動生成機能
   - Source: Grok
   - Why: 「不確実性があります」ではなく、どの部分がどれだけ不確実かを言語化するため
-  - Notes: Mermaid.js 形式のテキストで「不確実性ツリー」を出力（外部依存なし、テキストのみ）。現在の uncertainties リストをツリー構造に変換するイメージ
-  - Status: backlog
+  - Notes: `scripts/uncertainty_map.py` + `tests/test_uncertainty_map.py` として実装済み（2026-03-08 session 15）
+  - Status: done
 
 ### カテゴリ3: 安全性・倫理的堅牢性
 
@@ -116,11 +128,11 @@
   - Notes: scripts/three_review.py として実装済み（session 10）。パイプ対応（md_adapter | three_review）
   - Status: done
 
-- [ ] (2026-02-28) Idea: 決定後の「事後検証テンプレート」自動生成
+- [x] (2026-02-28) Idea: 決定後の「事後検証テンプレート」自動生成
   - Source: Grok
   - Why: 「この決定、3ヶ月後に振り返った時に何を確認すべきか」を事前に定義するため
-  - Notes: decision_brief の recommendation と next_questions から「事後チェックリスト」を自動生成。scripts/postmortem_template.py で実装可能
-  - Status: backlog
+  - Notes: `scripts/postmortem_template.py` + `tests/test_postmortem_template.py` として実装済み（2026-03-08 session 13）
+  - Status: done
 
 - [x] (2026-02-28) Idea: 候補案の「影響範囲マップ」自動作成
   - Source: Grok
@@ -128,11 +140,11 @@
   - Notes: _build_impact_map() + report["impact_map"] + format_report() の [Impact Map] セクションとして実装済み（session 10）
   - Status: done
 
-- [ ] (2026-02-28) Idea: 入力の「文脈圧縮」自動機能
+- [x] (2026-02-28) Idea: 入力の「文脈圧縮」自動機能
   - Source: Grok
   - Why: 長文 situation を重要情報を保持したまま要約し、処理精度を上げるため
-  - Notes: 標準ライブラリのみで実装（文長でフィルタリング + キーワード抽出）。外部 NLP ライブラリは使わない
-  - Status: backlog
+  - Notes: `aicw/context_compress.py` + `tests/test_context_compress.py` を追加（2026-03-08 session 13）。外部依存なし
+  - Status: done
 
 ### カテゴリ5: メタ・自己改善
 
