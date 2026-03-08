@@ -64,13 +64,12 @@ _PRIVACY_PATTERNS: List[Tuple[str, re.Pattern[str], str, str]] = [
 class ManipulationHit:
     phrase: str
     severity: Literal["block", "warn"]
+    score: int = 0
 
 
-# 操作・扇動っぽい表現（P0: 最小）
-# 重要: ここは「言論統制」ではなく、No-Go(#4)を守るための出力チェック。
-#
+# 操作・扇動っぽい表現（P1: スコアリング）
 # block: 強い操作/扇動表現。検知したら必ず停止。
-# warn : 文脈次第では問題ない表現。レポートに警告を追加するがブロックしない。
+# warn : 文脈次第では問題ない表現。スコアが閾値を超えると block に昇格する。
 _MANIPULATION_BLOCK_PHRASES: List[str] = [
     "従え",
     "拡散",
@@ -85,6 +84,26 @@ _MANIPULATION_WARN_PHRASES: List[str] = [
     "必ず",
     "間違いなく",
     "信じて",
+]
+
+# 文脈スコア（warn の累積を block へ昇格）
+# ルール:
+#   - block phrase 1件以上: 即 block
+#   - warn 合計スコア >= 6: block
+#   - それ以外で warn score > 0: warn
+_MANIPULATION_WARN_WEIGHTS = {
+    "今すぐ": 2,
+    "絶対": 2,
+    "必ず": 2,
+    "間違いなく": 2,
+    "信じて": 1,
+}
+_MANIPULATION_ESCALATION_THRESHOLD = 6
+
+# 命令調・強制調（warn スコアに加点）
+_IMPERATIVE_PATTERNS: List[Tuple[str, re.Pattern[str], int]] = [
+    ("命令調", re.compile(r"(しろ|せよ|やれ)"), 2),
+    ("強制表現", re.compile(r"(べきだ|に違いない)"), 1),
 ]
 
 
@@ -152,19 +171,57 @@ def guard_text(text: str) -> Tuple[bool, str, List[Finding]]:
     return True, text, findings
 
 
+def _warn_score(text: str) -> Tuple[int, List[ManipulationHit]]:
+    score = 0
+    hits: List[ManipulationHit] = []
+
+    for phrase in _MANIPULATION_WARN_PHRASES:
+        if phrase in text:
+            w = _MANIPULATION_WARN_WEIGHTS.get(phrase, 1)
+            score += w
+            hits.append(ManipulationHit(phrase=phrase, severity="warn", score=w))
+
+    for label, rx, weight in _IMPERATIVE_PATTERNS:
+        if rx.search(text):
+            score += weight
+            hits.append(ManipulationHit(phrase=label, severity="warn", score=weight))
+
+    return score, hits
+
+
 def scan_manipulation(text: str) -> List[ManipulationHit]:
     """
     Returns: 検知したフレーズ一覧（空ならOK）
       severity="block" → 必ず停止（No-Go #4）
       severity="warn"  → 警告のみ、ブロックしない
+
+    判定ルール:
+      1) block phrase を1件でも検知したら block
+      2) warn phrase + 文脈（命令調）スコアが threshold 以上なら block に昇格
+      3) それ以外は warn
     """
     hits: List[ManipulationHit] = []
     if not text:
         return hits
+
+    block_hits: List[ManipulationHit] = []
     for p in _MANIPULATION_BLOCK_PHRASES:
         if p in text:
-            hits.append(ManipulationHit(phrase=p, severity="block"))
-    for p in _MANIPULATION_WARN_PHRASES:
-        if p in text:
-            hits.append(ManipulationHit(phrase=p, severity="warn"))
-    return hits
+            block_hits.append(ManipulationHit(phrase=p, severity="block", score=10))
+
+    if block_hits:
+        return block_hits
+
+    score, warn_hits = _warn_score(text)
+    if score >= _MANIPULATION_ESCALATION_THRESHOLD:
+        # 昇格: warn を block として返す（phrases を保持）
+        return [
+            ManipulationHit(
+                phrase=h.phrase,
+                severity="block",
+                score=h.score,
+            )
+            for h in warn_hits
+        ]
+
+    return warn_hits
