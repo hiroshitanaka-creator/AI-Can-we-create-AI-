@@ -101,6 +101,46 @@ class TestMetaSuggestCore(unittest.TestCase):
 
 
 
+
+    def test_safety_checklist_items_are_excluded(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "guideline.md").write_text(
+                "## Safety Checklist\n"
+                "- [ ] do not pick this checklist item\n"
+                "## Current Next Actions\n"
+                "- [ ] actionable next task\n",
+                encoding="utf-8",
+            )
+            (root / "README.md").write_text("", encoding="utf-8")
+            (root / "idea_note.md").write_text("", encoding="utf-8")
+            (root / "progress_log.md").write_text("", encoding="utf-8")
+
+            result = build_suggestions(root, top_k=3)
+            proposals = [s["proposal"] for s in result["suggestions"]]
+            self.assertEqual(result["summary"]["total_candidates"], 1)
+            self.assertEqual(proposals, ["actionable next task"])
+
+
+    def test_japanese_checklist_heading_is_excluded(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "guideline.md").write_text(
+                "## No-Go チェックリスト\n"
+                "- [ ] チェックリスト項目は候補にしない\n"
+                "## Current Next Actions\n"
+                "- [ ] build feature\n",
+                encoding="utf-8",
+            )
+            (root / "README.md").write_text("", encoding="utf-8")
+            (root / "idea_note.md").write_text("", encoding="utf-8")
+            (root / "progress_log.md").write_text("", encoding="utf-8")
+
+            result = build_suggestions(root, top_k=3)
+            proposals = [s["proposal"] for s in result["suggestions"]]
+            self.assertEqual(result["summary"]["total_candidates"], 1)
+            self.assertEqual(proposals, ["build feature"])
+
     def test_non_action_items_are_kept_when_action_section_exists(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -138,7 +178,7 @@ class TestMetaSuggestCore(unittest.TestCase):
             (root / "progress_log.md").write_text("", encoding="utf-8")
 
             result = build_suggestions(root, top_k=1)
-            self.assertEqual(result["summary"]["total_candidates"], 2)
+            self.assertEqual(result["summary"]["total_candidates"], 1)
             self.assertEqual(result["suggestions"][0]["proposal"], "roadmap action")
             self.assertEqual(result["suggestions"][0]["source"], "README.md")
 
