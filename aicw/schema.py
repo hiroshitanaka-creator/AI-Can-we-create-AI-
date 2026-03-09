@@ -166,6 +166,10 @@ DECISION_BRIEF_V0: Dict[str, Any] = {
             "EXISTENCE_RISK_MEDIUM":    "生存構造への影響に注意（ライフサイクルと破壊の両方を検知）",
             "EXISTENCE_LIFECYCLE_OK":   "自然なライフサイクルの範囲内と判定",
             "EXISTENCE_IMPACT_OVERRIDE":"影響スコアが高く推奨を A（安全側）に引き上げ（P3）",
+            # 哲学的矛盾検知（Task8接続）
+            "PHILO_DUTY_OUTCOME_CONFLICT": "義務・権利と成果最大化が同時に主張され、緊張がある",
+            "PHILO_FAIRNESS_EFFICIENCY_CONFLICT": "公平・公正と効率最適化が衝突している",
+            "PHILO_RIGHTS_TOTAL_BENEFIT_CONFLICT": "全体便益のために権利例外を許容する緊張がある",
         },
         "not_selected": {
             "N/A":                "この案が推奨",

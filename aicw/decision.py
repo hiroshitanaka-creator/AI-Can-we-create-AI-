@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Tuple
 
 from .safety import guard_text, scan_manipulation
+from .philosophy_check import detect_philosophy_conflicts
 
 
 # ---------------------------------------------------------------------------
@@ -494,6 +495,12 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
         rec_id = "A"
         explanation += f" 影響スコア({impact_score}): 生存構造への影響が複数層に渡るため A（安全側）に引き上げ。"
         reason_codes = reason_codes + ["EXISTENCE_IMPACT_OVERRIDE"]
+
+    # Task8接続: 哲学的矛盾検知を selection.reason_codes に反映
+    philo_text = f"{situation} {explanation}"
+    for code in detect_philosophy_conflicts(philo_text):
+        if code not in reason_codes:
+            reason_codes.append(code)
 
     candidates = [
         {"id": cid, "summary": options[i], "not_selected_reason_code": (

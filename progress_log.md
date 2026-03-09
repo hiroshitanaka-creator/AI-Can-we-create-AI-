@@ -1,6 +1,152 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-03-09 (session 16 — Ensemble Review CLI 追加)
+
+### Goal
+- Task9 の実運用導線として、ensemble を単体実行できる CLI を追加する
+
+### Done
+- `scripts/ensemble_review.py`（新規）:
+  - 入力: request JSON（stdin/ファイル）
+  - `build_decision_report` で blocked 判定を先に実施
+  - ok 時は `run_ensemble(prompt)` を実行し、majority/minority/all opinions を Markdown 風で出力
+  - blocked 時は理由と safe_alternatives を出力して exit code 1
+  - exit code 0/1/2（ok / blocked / invalid）
+- `tests/test_ensemble_review_cli.py`（新規）: 4件追加
+  - ok 時の exit 0
+  - 出力に Majority/Minority を含む
+  - blocked 時の exit 1 + BLOCKED 表示
+  - 不正JSONで exit 2
+- `guideline.md`:
+  - Current Next Actions に CLI 追加完了を追記
+
+### Test Results
+- `python -m unittest -v tests.test_ensemble_review_cli` PASS
+- `python -m unittest discover -s tests -v` PASS
+
+---
+
+## 2026-03-09 (session 15 — three_review に Ensemble セクション統合)
+
+### Goal
+- 既存の Task9（bridge/ensemble.py）を three_review CLI 出力に接続し、多視点レビューを実際に利用可能にする
+
+### Done
+- `scripts/three_review.py`:
+  - `run_ensemble` を取り込み、`build_ensemble_section(report)` を追加
+  - `format_three_review()` に `🧠 Ensemble（多視点レビュー）` セクションを追加
+  - 多数派（stance/members）と少数意見（minority report）を表示
+- `tests/test_p1_features.py`:
+  - `TestThreeReviewEnsemble` を追加（2件）
+    - Ensemble セクションが出力に含まれる
+    - 多数派・minority report 文言が含まれる
+- `guideline.md`:
+  - Current Next Actions に統合作業の完了を追記
+
+### Test Results
+- `python -m unittest -v tests.test_p1_features` PASS
+- `python -m unittest discover -s tests -v` PASS
+
+---
+
+## 2026-03-09 (session 14 — Task8統合: PHILO reason_codes を Decision Brief に接続)
+
+### Goal
+- 追加済みの哲学矛盾検知モジュールを `build_decision_report()` に統合し、実出力で利用可能にする
+
+### Done
+- `aicw/decision.py`:
+  - `detect_philosophy_conflicts` を import
+  - `selection.explanation` 生成後に `situation + explanation` を検査し、`PHILO_*` を `selection.reason_codes` へ追記
+  - 重複コードは追加しないように制御
+- `aicw/schema.py`:
+  - `reason_codes.selection` に `PHILO_DUTY_OUTCOME_CONFLICT` / `PHILO_FAIRNESS_EFFICIENCY_CONFLICT` /
+    `PHILO_RIGHTS_TOTAL_BENEFIT_CONFLICT` を追加
+- `tests/test_philosophy_check.py`:
+  - integration test を追加（`build_decision_report` 経由で `PHILO_DUTY_OUTCOME_CONFLICT` が反映されることを確認）
+- `guideline.md`:
+  - Current Next Actions に Task8統合完了を追記
+
+### Test Results
+- `python -m unittest -v tests.test_philosophy_check` PASS
+- `python -m unittest discover -s tests -v` PASS
+
+---
+
+## 2026-03-09 (session 13 — Task 10: API契約 v0.1 固定)
+
+### Goal
+- Week2 Task10（P2）: 現行 schema/CLI を基準に API 契約書を固定し、逸脱検知テストを追加する
+
+### Done
+- `docs/api_contract_v0_1.md`（新規）:
+  - request/response/CLI の固定契約（必須キー・enum・exit code）を明文化
+  - `blocked_by` の許容値（#6/#5/#4）を明記
+  - 変更時は契約書と契約テストを同時更新する運用を明記
+- `tests/test_api_contract.py`（新規）: 9件追加
+  - request契約（必須・allowed・未知キー拒否）
+  - response契約（status enum / blocked_by_values）
+  - 実行時契約（ok/blocked の必須キー）
+  - CLI契約（exit code 0/1/2）
+- `guideline.md`:
+  - Sprint Plan進捗に Week2 Task10 完了を反映
+
+### Test Results
+- `python -m unittest -v tests.test_api_contract` PASS
+- `python -m unittest discover -s tests -v` PASS
+
+---
+
+## 2026-03-09 (session 12 — Task 9: 哲学者アンサンブル)
+
+### Goal
+- Week2 Task9（P2）: bridge 層で軽量な哲学者アンサンブルを実装し、多数派と少数意見を返す
+
+### Done
+- `bridge/ensemble.py`（新規）:
+  - `run_ensemble(prompt, context=None)` を追加
+  - 3哲学者テンプレート（HiroshiTanaka / Pragmatist / RightsGuardian）で意見生成
+  - 出力: `opinions` / `majority` / `minority_report`
+  - 全会一致時でも `SystemMinority` を補完して少数意見を常に返す
+- `tests/test_ensemble.py`（新規）: 5件追加
+  - 必須キー、3テンプレート、majority構造、minority常時出力、リスク文脈で oppose を検証
+- `guideline.md`:
+  - Sprint Plan進捗に Week2 Task9 完了を反映
+
+### Test Results
+- `python -m unittest -v tests.test_ensemble` PASS
+- `python -m unittest discover -s tests -v` PASS
+
+---
+
+
+## 2026-03-09 (session 11 — Task 8: 哲学的矛盾検知モジュール)
+
+### Goal
+- Week2 Task8（P2）: 説明文中の規範矛盾を簡易ルールで検知し、reason code を返す
+
+### Done
+- `aicw/philosophy_check.py`（新規）:
+  - `detect_philosophy_conflicts(text)` を追加
+  - 3系統の矛盾パターンを reason code で返却
+    - `PHILO_DUTY_OUTCOME_CONFLICT`（義務論 vs 功利）
+    - `PHILO_FAIRNESS_EFFICIENCY_CONFLICT`（公正 vs 効率）
+    - `PHILO_RIGHTS_TOTAL_BENEFIT_CONFLICT`（権利 vs 総便益）
+  - 逆接（だが/しかし/一方で）と例外語を組み合わせた軽量判定
+- `tests/test_philosophy_check.py`（新規）: 5件追加
+  - 空入力 / 3系統の検知 / 非検知ケース
+- `aicw/__init__.py`:
+  - `detect_philosophy_conflicts` を公開APIに追加
+- `guideline.md`:
+  - Sprint Plan進捗に Week2 Task8 完了を反映
+
+### Test Results
+- `python -m unittest -v tests.test_philosophy_check` PASS
+- `python -m unittest discover -s tests -v` PASS
+
+---
+
 ## 2026-02-28 (session 9 — 整理 + Markdown アダプタ + bridge テスト)
 
 ### Goal

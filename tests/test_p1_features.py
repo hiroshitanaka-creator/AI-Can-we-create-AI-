@@ -233,6 +233,18 @@ class TestThreeReviewUser(unittest.TestCase):
         self.assertIn("影響範囲マップ", result.stdout)
 
 
+class TestThreeReviewEnsemble(unittest.TestCase):
+
+    def test_output_contains_ensemble_section(self):
+        result = _run_three_review({"situation": "テスト"})
+        self.assertIn("Ensemble", result.stdout)
+
+    def test_output_contains_majority_and_minority(self):
+        result = _run_three_review({"situation": "テスト"})
+        self.assertIn("多数派", result.stdout)
+        self.assertIn("minority report", result.stdout)
+
+
 class TestThreeReviewBlocked(unittest.TestCase):
 
     def test_blocked_shows_blocked_message(self):

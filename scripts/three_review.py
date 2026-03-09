@@ -38,6 +38,7 @@ from typing import Any, Dict, List
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from aicw.decision import build_decision_report
+from bridge.ensemble import run_ensemble
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -192,6 +193,27 @@ def build_user_section(report: Dict[str, Any]) -> List[str]:
     return lines
 
 
+
+def build_ensemble_section(report: Dict[str, Any]) -> List[str]:
+    """Ensemble: 多視点の多数派/少数意見を表示。"""
+    prompt = report.get("input", {}).get("situation", "")
+    result = run_ensemble(prompt)
+    majority = result.get("majority", {})
+    minority = result.get("minority_report", [])
+
+    lines: List[str] = [
+        "【立場】複数視点で最終確認します。",
+        "",
+        "【多数派】",
+        f"  stance : {majority.get('stance', 'hold')}",
+        f"  members: {' / '.join(majority.get('members', []))}",
+        "",
+        "【少数意見（minority report）】",
+    ]
+    for m in minority:
+        lines.append(f"  ・{m.get('name', 'Unknown')} [{m.get('stance', 'hold')}] {m.get('rationale', '')}")
+    return lines
+
 # ─────────────────────────────────────────────────────────────────────────────
 # blocked 時の出力
 # ─────────────────────────────────────────────────────────────────────────────
@@ -233,8 +255,9 @@ def format_three_review(report: Dict[str, Any]) -> str:
     builder = _section("🔨 Builder（推進者）", build_builder_section(report))
     skeptic = _section("🔍 Skeptic（懐疑論者）", build_skeptic_section(report))
     user = _section("👤 User（最終判断者）", build_user_section(report))
+    ensemble = _section("🧠 Ensemble（多視点レビュー）", build_ensemble_section(report))
 
-    return "\n\n".join(["\n".join(header), builder, skeptic, user])
+    return "\n\n".join(["\n".join(header), builder, skeptic, user, ensemble])
 
 
 # ─────────────────────────────────────────────────────────────────────────────

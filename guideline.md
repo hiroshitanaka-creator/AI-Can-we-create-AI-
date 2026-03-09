@@ -180,4 +180,9 @@ python run_demo.py
 - [x] Week1 P1: 文化差分テスト + 事後検証テンプレ + 文脈圧縮
 - [x] Week2 Task6: manipulation動的化（スコアリング + 閾値昇格）
 - [x] Week2 Task7: 不確実性マップ（Mermaid風テキスト）
-- [ ] Week2 P1/P2: manipulation動的化 + 不確実性マップ + 哲学モジュール + API契約固定
+- [x] Week2 Task10: Po_core 統合インターフェース v0.1 固定（API契約 + 契約テスト）
+- [x] Week2 Task9: 哲学者アンサンブル（軽量）
+- [x] Week2 Task8: 哲学的矛盾検知モジュール（reason code返却）
+- [x] Task8 接続: 哲学的矛盾検知（PHILO_*）を decision.selection.reason_codes に統合
+- [x] three_review に Ensemble（多数派/少数意見）セクションを統合
+- [x] scripts/ensemble_review.py を追加（Ensemble 単体CLI + blocked分岐）
