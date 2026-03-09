@@ -88,17 +88,17 @@
 
 ### カテゴリ2: 哲学的・説明性向上
 
-- [ ] (2026-02-28) Idea: 軽量「哲学者アンサンブル」シミュレーター（Po_core プレビュー版）
+- [x] (2026-02-28) Idea: 軽量「哲学者アンサンブル」シミュレーター（Po_core プレビュー版）
   - Source: Grok
   - Why: 本格 Po_core 連携前に、このリポジトリだけで「哲学的議論」を体現し、説得力を高める
-  - Notes: Kant / Nietzsche / Rawls など 5〜7人の簡易テンプレートを bridge/ に定義し、多数決＋反対意見リストを自動生成。HiroshiTanaka と同じ Philosopher 継承で実装できる。外部依存なし
-  - Status: backlog
+  - Notes: 3哲学者テンプレート（HiroshiTanaka / Pragmatist / RightsGuardian）を `bridge/ensemble.py` に実装し、多数派意見 + 少数意見（全会一致時は SystemMinority 補完）を返す設計で完了（2026-03-09 session 11）。
+  - Status: done
 
-- [ ] (2026-02-28) Idea: 「哲学的矛盾検知」モジュール
+- [x] (2026-02-28) Idea: 「哲学的矛盾検知」モジュール
   - Source: Grok
   - Why: 決定理由の中に「義務論と功利主義が矛盾してる」みたいな哲学的齟齬を指摘するため
-  - Notes: 簡易論理矛盾チェック＋哲学キーワードマッチ。Po_core の Skeptic 役として組み込める
-  - Status: backlog
+  - Notes: `aicw/philosophy_check.py` で 3系統（義務論/功利、公正/効率、権利/総便益）の矛盾 reason code 検知を実装し、`aicw/decision.py` 側の `reason_codes` にも接続済み（2026-03-09 session 11）。
+  - Status: done
 
 - [x] (2026-02-28) Idea: 「不確実性マップ」自動生成機能
   - Source: Grok
@@ -148,11 +148,11 @@
 
 ### カテゴリ5: メタ・自己改善
 
-- [ ] (2026-02-28) Idea: 「このリポジトリ自身を改善する提案」を AI が出すメタモジュール
+- [x] (2026-02-28) Idea: 「このリポジトリ自身を改善する提案」を AI が出すメタモジュール
   - Source: Grok
   - Why: タイトル通りの「AIがAIを作る」循環を安全に体験するため（人間レビュー必須）
-  - Notes: 毎回 progress_log.md / guideline.md を読んで「次にやるべきこと」を3案出す。scripts/meta_suggest.py として実装。外部 API 不使用
-  - Status: backlog
+  - Notes: `scripts/meta_suggest.py` と `tests/test_meta_suggest.py` を追加し、未完了チェックボックスを収集して上位3提案をJSONで返すCLIとして実装（2026-03-09 session 16）。外部 API 不使用
+  - Status: done
 
 ---
 
