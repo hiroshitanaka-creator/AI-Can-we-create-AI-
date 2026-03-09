@@ -186,3 +186,4 @@ python run_demo.py
 - [x] Task8 接続: 哲学的矛盾検知（PHILO_*）を decision.selection.reason_codes に統合
 - [x] three_review に Ensemble（多数派/少数意見）セクションを統合
 - [x] scripts/ensemble_review.py を追加（Ensemble 単体CLI + blocked分岐）
+- [x] scripts/meta_suggest.py を追加（未完了タスクから次アクション3案を提案するメタモジュール）

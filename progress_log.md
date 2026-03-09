@@ -692,3 +692,25 @@ impact_score = min(構造層数 + risk_bonus, 8) ／ threshold=6 で A にオー
 ### Test Results
 - `PYTHONPATH=. pytest -q tests/test_uncertainty_map.py` → 7 passed
 - `PYTHONPATH=. pytest -q` → 412 passed, 20 subtests passed
+
+## 2026-03-09 (session 16 — Backlog: メタ改善提案モジュール)
+
+### Goal
+- Backlog「このリポジトリ自身を改善する提案」を出すメタモジュールを実装する
+
+### Done
+- `scripts/meta_suggest.py`（新規）:
+  - `guideline.md` / `progress_log.md` / `idea_note.md` を走査し、`- [ ]` の未完了項目を抽出
+  - 優先順位（guideline > idea_note > progress_log）で上位 `top_k` 件（既定3件）を提案JSONとして出力
+  - 未完了項目がない場合のフォールバック提案を実装
+  - CLI引数: `python scripts/meta_suggest.py [top_k]`（不正引数は exit code 2）
+- `tests/test_meta_suggest.py`（新規）:
+  - 未完了項目抽出と優先順位、フォールバック、`top_k` バリデーション、CLI正常系/異常系を検証（5件）
+- `idea_note.md`:
+  - Backlog の「哲学者アンサンブル」「哲学的矛盾検知」「メタモジュール」を done に同期
+- `guideline.md`:
+  - Current Next Actions に `scripts/meta_suggest.py` 完了を追記
+
+### Test Results
+- `python -m unittest -v tests.test_meta_suggest` PASS
+- `python -m unittest discover -s tests -v` PASS
