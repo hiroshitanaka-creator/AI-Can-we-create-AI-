@@ -131,8 +131,8 @@ python run_demo.py
 - [x] 3人レビュー＋自動テスト基盤の実装（three_review CLI + ensemble）
 - [x] AI権利に関する哲学的実験モジュールの追加（ai_rights_experiment）
 - [x] 逆算誘導チェック（check_reverse_manipulation, No-Go #4 強化）
-- [ ] 哲学テンソル統合 (Po_coreとの本格連携)
-- [ ] 実ビジネス意思決定支援デモ (非公開企業向け)
+- [x] 哲学テンソル統合 v0.1（po_core_bridge: W_eth/T_free/T_sub/Po）
+- [x] 実ビジネス意思決定支援デモ（demo_business: 3シナリオ End-to-End）
 
 ---
 

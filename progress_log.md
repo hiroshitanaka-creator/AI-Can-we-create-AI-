@@ -1,6 +1,44 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-03-09 (session 18 — 哲学テンソル統合・実ビジネスデモ)
+
+### Goal
+- meta_suggest 上位2件を実装する
+- 1: 哲学テンソル統合（Po_core連携準備 bridge/po_core_bridge.py）
+- 2: 実ビジネス意思決定支援デモ（scripts/demo_business.py）
+
+### Done
+- `bridge/po_core_bridge.py`（新規）:
+  - `BRIDGE_VERSION = "v0.1"` / `TENSOR_SCHEMA_VERSION = "philosophy_tensor.v0.1"`
+  - 4テンソル成分:
+    - `W_eth`: 哲学的矛盾検知 + アンサンブルレビュー統合（倫理テンソル）
+    - `T_free`: AI権利3立場の緊張指数（自由テンソル核）
+    - `T_sub`: 直接操作 + 逆算誘導リスク統合（自己定義テンソル）
+    - `Po`: 生存構造影響密度（存在密度テンソル。existence_analysis から計算）
+  - `analyze_philosophy_tensor()`: 全コンポーネントを統合分析する公開 API
+  - `get_tensor_schema()`: 契約テスト用スキーマ定義（Po_core 連携準備）
+  - `po_core_compatibility` ブロック: bridge_version + stable_api フラグ
+- `scripts/demo_business.py`（新規）:
+  - 3ビジネスシナリオ: AI採用審査 / 大規模人員再配置 / カーボンニュートラル投資
+  - 全パイプライン: decision_report → audit_log → philosophy_tensor → postmortem_summary
+  - CLI: `--scenario 1/2/3`, `--json`, `--list`
+  - 人間向け出力フォーマッタと JSON モード両対応
+- `tests/test_po_core_bridge.py`（新規）: 41件
+- `tests/test_demo_business.py`（新規）: 13件
+- `README.md`: 哲学テンソル統合・実デモを ✅ に更新
+- `guideline.md`: Session 18 タスクセクション追加
+
+### Test Results
+- `python -m unittest discover -s tests -q` → **563 tests PASS**
+
+### Next Actions（候補）
+- check_reverse_manipulation の NLP ベース強化（精度向上）
+- Po_core 本格連携のための API 仕様書拡充
+- デモシナリオの追加（医療・教育・公共政策など）
+
+---
+
 ## 2026-03-09 (session 17 — Next Phase: 監査ログ・AI権利実験・逆算誘導チェック)
 
 ### Goal
