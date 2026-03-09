@@ -27,7 +27,9 @@ Pure Python ミニ Transformer エンコーダ
 
 from __future__ import annotations
 
+import json
 import math
+import os
 import random
 from typing import Dict, List, Tuple
 
@@ -386,6 +388,65 @@ class MiniTransformerEncoder:
 
     def clear_cache(self) -> None:
         self._cache.clear()
+
+    # ------------------------------------------------------------------
+    # 重みの保存 / ロード
+    # ------------------------------------------------------------------
+
+    def save_weights(self, path: str) -> None:
+        """
+        Token Embedding テーブルを JSON ファイルに保存する。
+
+        保存形式:
+            {
+              "version": "transformer_weights.v0.1",
+              "d_model": int,
+              "vocab_size": int,
+              "embed_table": [[float, ...], ...]
+            }
+
+        Args:
+            path: 保存先ファイルパス
+        """
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        data = {
+            "version": "transformer_weights.v0.1",
+            "d_model": self.D_MODEL,
+            "vocab_size": self._vocab_size,
+            "embed_table": self.embed.table,
+        }
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+
+    def load_weights(self, path: str) -> None:
+        """
+        保存済み Token Embedding テーブルを JSON ファイルからロードする。
+
+        embed.table を上書きし、キャッシュをクリアする。
+
+        Args:
+            path: 重みファイルパス（save_weights で保存したもの）
+
+        Raises:
+            FileNotFoundError: ファイルが存在しない
+            ValueError: 重みの形状が現在のモデルと不一致
+        """
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+
+        table = data.get("embed_table", [])
+        if not table:
+            raise ValueError(f"embed_table が空です: {path}")
+
+        if len(table) != self._vocab_size or len(table[0]) != self.D_MODEL:
+            raise ValueError(
+                f"重みの形状が不一致: "
+                f"expected ({self._vocab_size}, {self.D_MODEL}), "
+                f"got ({len(table)}, {len(table[0]) if table else 0})"
+            )
+
+        self.embed.table = table
+        self.clear_cache()
 
 
 # ---------------------------------------------------------------------------
