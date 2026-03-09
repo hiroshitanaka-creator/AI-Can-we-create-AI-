@@ -164,14 +164,14 @@
   - Notes: ⚠ 現時点では時期尚早。Po_core 連携が固まり、API が安定してから検討。pip パッケージ化はリリースポリシーの決定も必要
   - Status: 保留（Po_core 連携後に再検討）
 
-- [ ] (2026-02-28) Idea: run_demo.py を「インタラクティブ意思決定シミュレーター」に進化（GUI化）
+- [x] (2026-02-28) Idea: run_demo.py を「インタラクティブ意思決定シミュレーター」に進化（GUI化）
   - Source: Grok
   - Why: 企業向けデモで「実際に使ってる感」を出すため
-  - Notes: ⚠ Streamlit/Gradio は**外部依存NG**（方針違反）。ただし標準ライブラリの tkinter や curses で CLI インタラクティブ版なら可能。要検討
-  - Status: 保留（外部依存なし実装方法を検討してから）
+  - Notes: `scripts/interactive_sim.py` として `input()` ベース CLI で実装（外部依存なし）。`--auto` / `--json` / `--no-kb` オプション対応。stdin 差し替えでテスト可能（2026-03-09 session 19）
+  - Status: done（CLIインタラクティブ版として実装完了）
 
-- [ ] (2026-02-28) Idea: オフライン知識ベース（ローカル JSON）に「過去類似決定」を蓄積
+- [x] (2026-02-28) Idea: オフライン知識ベース（ローカル JSON）に「過去類似決定」を蓄積
   - Source: Grok
   - Why: 「以前似たような決定をした」という文脈を活用するため
-  - Notes: ⚠ 「候補案の全文は保存しない」方針と競合する可能性あり。ハッシュ + reason_codes のみ保存なら可能かもしれない。Privacyチェック必須
-  - Status: 保留（privacy 方針との整合確認後に再検討）
+  - Notes: `aicw/knowledge_base.py` として実装。decision_hash + status + reason_codes + timestamp のみ保存（生テキスト保存なし）。Jaccard 類似度で類似過去決定を検索。JSON ファイル永続化対応（2026-03-09 session 19）
+  - Status: done（#6 Privacy 完全準拠で実装完了）

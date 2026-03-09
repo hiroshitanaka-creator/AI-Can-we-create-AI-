@@ -1,6 +1,37 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-03-09 (session 19 — インタラクティブシミュレーター・知識ベース)
+
+### Goal
+- idea_note「将来検討」から実装可能な2件を進める
+- 1: インタラクティブ意思決定シミュレーター（外部依存なし CLI）
+- 2: オフライン知識ベース（Privacy準拠・Jaccard類似検索）
+
+### Done
+- `scripts/interactive_sim.py`（新規）:
+  - `collect_request()`: stdin 差し替え可能な対話入力収集（テスト容易性確保）
+  - `run_simulation()`: 全パイプライン（decision → audit_log → philosophy_tensor → knowledge_base）
+  - `display_result()`: 人間向け出力（不確実性・次の問い・類似過去決定）
+  - CLI: `--auto` / `--json` / `--no-kb` オプション対応
+  - 外部ライブラリ不使用・`input()` ベース
+- `aicw/knowledge_base.py`（新規）:
+  - decision_hash + status + reason_codes + timestamp のみ保存（生テキストなし）
+  - `find_similar()`: Jaccard 類似度による類似過去決定検索（top_k / min_similarity / status_filter）
+  - `stats()`: 統計サマリ（件数 / reason_codes 頻度 TOP5）
+  - JSON ファイル永続化（空/破損ファイルは無視）
+  - max_entries 上限管理（デフォルト 500）
+  - #6 Privacy 完全準拠
+- `tests/test_interactive_sim.py`（新規）: 18件
+- `tests/test_knowledge_base.py`（新規）: 34件
+- `idea_note.md`: 2件を done に更新
+- `guideline.md`: Session 19 タスクセクション追加
+
+### Test Results
+- `python -m unittest discover -s tests -q` → **615 tests PASS**
+
+---
+
 ## 2026-03-09 (session 18 — 哲学テンソル統合・実ビジネスデモ)
 
 ### Goal
