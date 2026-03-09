@@ -2,6 +2,18 @@
 > 思いつき/提案/将来の改善案のメモ。採用・保留・却下を残す。
 
 ## Backlog
+- [x] (2026-03-09) Idea: meta_suggest のチェックリスト除外を日本語見出しでも機能させる
+  - Source: PR review feedback
+  - Why: `No-Go チェックリスト` のような見出しでも誤って実装タスク抽出されないようにするため
+  - Notes: `scripts/meta_suggest.py` の非タスク見出しヒントに `チェックリスト` を追加。`tests/test_meta_suggest.py` に日本語見出し回帰テストを追加
+  - Status: done
+
+- [x] (2026-03-09) Idea: meta_suggest が Safety Checklist / No-Go Checklist をタスクとして拾わないようにする
+  - Source: docs/next_issues.md Issue #2
+  - Why: 実装タスクと確認チェックリストを区別し、次アクション提案の精度を上げるため
+  - Notes: `scripts/meta_suggest.py` に非タスク見出し除外を追加し、`tests/test_meta_suggest.py` に回帰テストを追加
+  - Status: done
+
 - [x] (2026-03-08) Idea: manipulation 検知をスコアリング化し warn/block を段階化する
   - Source: Sprint Task 6
   - Why: 単純一致の誤検知を抑えつつ、高リスク文脈は確実に block するため

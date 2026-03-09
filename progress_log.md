@@ -1,6 +1,43 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-03-09 (session 21 — meta_suggest 誤検知修正フォローアップ)
+
+### Goal
+- 前回修正のレビュー指摘を踏まえ、チェックリスト見出し除外の多言語耐性を強化する
+
+### Done
+- `scripts/meta_suggest.py` を更新:
+  - 非タスク見出しヒントに `チェックリスト` を追加
+  - `No-Go チェックリスト` のような日本語見出しでも `- [ ]` 項目を候補抽出から除外
+- `tests/test_meta_suggest.py` を更新:
+  - `test_japanese_checklist_heading_is_excluded` を追加
+
+### Test Results
+- `python -m unittest -v tests.test_meta_suggest` → **15 tests PASS**
+- `python scripts/meta_suggest.py 5` で提案候補の妥当性を確認
+
+---
+
+## 2026-03-09 (session 20 — meta_suggest 誤検知修正)
+
+### Goal
+- `meta_suggest` が `guideline.md` の Safety Checklist を「次タスク候補」に誤検知する問題を修正する
+
+### Done
+- `scripts/meta_suggest.py` を更新:
+  - 非タスク見出し判定（`Safety Checklist` / `No-Go Checklist`）を追加
+  - 非タスクセクション内の `- [ ]` 項目を抽出対象から除外
+- `tests/test_meta_suggest.py` を更新:
+  - Safety Checklist 項目が候補に出ないことを検証するテストを追加
+  - 既存テスト期待値を新仕様に合わせて更新
+
+### Test Results
+- `python -m unittest -v tests.test_meta_suggest` → **14 tests PASS**
+- `python scripts/meta_suggest.py 5` で checklist 項目が出力されないことを確認
+
+---
+
 ## 2026-03-09 (session 19 — インタラクティブシミュレーター・知識ベース)
 
 ### Goal

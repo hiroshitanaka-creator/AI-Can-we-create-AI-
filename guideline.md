@@ -187,6 +187,8 @@ python run_demo.py
 - [x] three_review に Ensemble（多数派/少数意見）セクションを統合
 - [x] scripts/ensemble_review.py を追加（Ensemble 単体CLI + blocked分岐）
 - [x] scripts/meta_suggest.py を追加（未完了タスクから次アクション3案を提案するメタモジュール）
+- [x] meta_suggest の精度改善（Safety Checklist / No-Go Checklist の誤検知除外）
+- [x] meta_suggest 非タスク見出し除外の多言語対応（`No-Go チェックリスト` 誤検知防止）
 
 ## Next Phase Tasks（2026-03-09 session 17〜）
 - [x] aicw/audit_log.py 追加（最小監査ログ: PII不保存・ハッシュのみ・TTL付き・インメモリ）

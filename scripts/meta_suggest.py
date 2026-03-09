@@ -29,6 +29,12 @@ _ACTION_HEADING_HINTS = (
     "todo",
 )
 
+_NON_TASK_HEADING_HINTS = (
+    "safety checklist",
+    "no-go checklist",
+    "チェックリスト",
+)
+
 _BOLD_HEADING_WITH_SUFFIX_COLON_RE = re.compile(r"^\*\*(.+?)\*\*\s*:\s*$")
 _BOLD_HEADING_WITH_INNER_COLON_RE = re.compile(r"^\*\*(.+?:)\*\*\s*$")
 
@@ -38,14 +44,19 @@ def _is_action_heading_text(heading: str) -> bool:
     return any(hint in lowered for hint in _ACTION_HEADING_HINTS)
 
 
-def _classify_heading(line: str) -> Tuple[bool, bool]:
-    """Return (is_heading, is_action_heading)."""
+def _is_non_task_heading_text(heading: str) -> bool:
+    lowered = heading.lower().strip()
+    return any(hint in lowered for hint in _NON_TASK_HEADING_HINTS)
+
+
+def _classify_heading(line: str) -> Tuple[bool, bool, bool]:
+    """Return (is_heading, is_action_heading, is_non_task_heading)."""
     stripped = line.strip()
     lowered = stripped.lower()
 
     if lowered.startswith("#"):
         heading = lowered.lstrip("#").strip()
-        return True, _is_action_heading_text(heading)
+        return True, _is_action_heading_text(heading), _is_non_task_heading_text(heading)
 
     # README の "**Upcoming Milestones (2026):**" / "**Todo**:" のような見出し記法に対応
     # 太字行は「コロン付き」の場合のみ見出しとして扱い、通常の強調文を誤検知しない。
@@ -54,24 +65,26 @@ def _classify_heading(line: str) -> Tuple[bool, bool]:
         m = _BOLD_HEADING_WITH_INNER_COLON_RE.match(stripped)
     if m:
         heading = m.group(1).strip().rstrip(":")
-        return True, _is_action_heading_text(heading)
+        return True, _is_action_heading_text(heading), _is_non_task_heading_text(heading)
 
-    return False, False
+    return False, False, False
 
 
 def _extract_unchecked_tasks(text: str) -> List[Dict[str, object]]:
     unchecked_anywhere: List[Dict[str, object]] = []
     in_action_section = False
+    in_non_task_section = False
 
     for line in text.splitlines():
         stripped = line.strip()
 
-        is_heading, is_action_heading = _classify_heading(stripped)
+        is_heading, is_action_heading, is_non_task_heading = _classify_heading(stripped)
         if is_heading:
             in_action_section = is_action_heading
+            in_non_task_section = is_non_task_heading
             continue
 
-        if stripped.startswith("- [ ] "):
+        if stripped.startswith("- [ ] ") and not in_non_task_section:
             unchecked_anywhere.append(
                 {
                     "task": stripped[6:].strip(),
