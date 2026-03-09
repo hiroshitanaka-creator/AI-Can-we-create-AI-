@@ -187,3 +187,11 @@ python run_demo.py
 - [x] three_review に Ensemble（多数派/少数意見）セクションを統合
 - [x] scripts/ensemble_review.py を追加（Ensemble 単体CLI + blocked分岐）
 - [x] scripts/meta_suggest.py を追加（未完了タスクから次アクション3案を提案するメタモジュール）
+
+## Next Phase Tasks（2026-03-09 session 17〜）
+- [x] aicw/audit_log.py 追加（最小監査ログ: PII不保存・ハッシュのみ・TTL付き・インメモリ）
+- [x] aicw/ai_rights_experiment.py 追加（AI権利哲学的実験: 3立場 FULL_RIGHTS/CONDITIONAL/NO_RIGHTS）
+- [x] aicw/safety.py に check_reverse_manipulation() 追加（逆算誘導チェック: Jaccard語彙類似度）
+- [x] tests/test_audit_log.py 追加（26件）
+- [x] tests/test_ai_rights_experiment.py 追加（20件）
+- [x] tests/test_reverse_manipulation.py 追加（12件）

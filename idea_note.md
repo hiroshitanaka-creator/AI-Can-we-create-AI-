@@ -108,11 +108,11 @@
 
 ### カテゴリ3: 安全性・倫理的堅牢性
 
-- [ ] (2026-02-28) Idea: 「人間の決定を逆算して誘導していないか」の動的チェック
+- [x] (2026-02-28) Idea: 「人間の決定を逆算して誘導していないか」の動的チェック
   - Source: Grok
   - Why: static な anti-manipulation を超え、出力後に逆算して「AI が人間の結論を先読みして誘導してないか」を検知するため
-  - Notes: 出力候補を人間の最終決定と比較し、類似度が異常なら警告。実装難易度は高いが、No-Go #4 の実質的な強化になる
-  - Status: backlog
+  - Notes: `aicw/safety.py` に `check_reverse_manipulation()` を追加（Jaccard 語彙類似度による近似推定）。`tests/test_reverse_manipulation.py` 12件追加（2026-03-09 session 17）
+  - Status: done（初期近似実装。将来 NLP ベースへの強化は継続課題）
 
 - [x] (2026-02-28) Idea: 「AIの限界宣言」機能を全出力に強制挿入
   - Source: Grok

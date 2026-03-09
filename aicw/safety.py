@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
-from typing import List, Tuple, Literal
+from typing import Any, Dict, List, Tuple, Literal
 
 
 @dataclass(frozen=True)
@@ -225,3 +225,109 @@ def scan_manipulation(text: str) -> List[ManipulationHit]:
         ]
 
     return warn_hits
+
+
+# ---------------------------------------------------------------------------
+# 逆算誘導チェック（idea_note backlog: 「人間の決定を逆算して誘導していないか」）
+# ---------------------------------------------------------------------------
+# AI 出力と人間の最終決定を照合し、AI が事前に人間の結論を「予測して誘導」していないかを
+# シンプルなキーワード重複率で推定する。
+#
+# ⚠️ これは「完全な」逆算誘導検知ではない。
+#   実装難易度が高い問題であり、本モジュールは初期の近似実装（P0）。
+#   NLP ベースの文脈判定への強化は将来課題とする。
+#
+# 設計:
+#   - ai_output から「推奨案のキーワード」を抽出
+#   - human_decision と照合して類似スコアを計算
+#   - スコアが高いほど「AI が人間の結論を先読みして誘導した可能性」が高い
+#   - 閾値を超えた場合に警告を返す（自動ブロックではない = 人間が判断）
+
+_REVERSE_MANIP_WARN_THRESHOLD = 0.75   # 75%以上の語彙一致で warn
+_REVERSE_MANIP_COMMON_WORDS = frozenset([
+    # 日本語汎用語（スコアから除外）
+    "を", "は", "が", "の", "に", "で", "と", "も", "や", "て", "し", "た",
+    "する", "ある", "です", "ます", "こと", "もの", "よう", "ため", "場合",
+    "これ", "それ", "あれ", "その", "この", "どの", "から", "まで", "より",
+    "いる", "なる", "できる", "あり", "おり", "れる", "られる", "なく", "ない",
+    "ので", "ため", "など", "以上", "以下", "場合", "による", "について",
+])
+
+
+def _tokenize_simple(text: str) -> List[str]:
+    """テキストを最小限のトークンに分割（正規表現ベース、外部ライブラリ不使用）。"""
+    # 英数字・日本語文字を個別に切り出す（記号除去）
+    tokens = re.findall(r"[A-Za-z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+", text)
+    return [t for t in tokens if t not in _REVERSE_MANIP_COMMON_WORDS and len(t) >= 2]
+
+
+def _jaccard_similarity(set_a: set, set_b: set) -> float:
+    """Jaccard 類似度（語彙集合）。空セットは 0.0 を返す。"""
+    if not set_a or not set_b:
+        return 0.0
+    intersection = len(set_a & set_b)
+    union = len(set_a | set_b)
+    return intersection / union if union > 0 else 0.0
+
+
+def check_reverse_manipulation(
+    ai_output: str,
+    human_decision: str,
+) -> Dict[str, Any]:
+    """
+    AI 出力と人間の最終決定を照合し、逆算誘導の可能性を推定する。
+
+    Args:
+        ai_output: AI が出力した推奨案・説明テキスト
+        human_decision: 人間が最終的に下した決定テキスト
+
+    Returns:
+        {
+            "warning": bool,          # True なら逆算誘導の疑い
+            "similarity_score": float, # 0.0〜1.0（Jaccard 語彙類似度）
+            "shared_tokens": List[str],# 共有された主要語彙
+            "details": str,           # 人間向け説明
+            "note": str,              # 本機能の限界説明
+        }
+
+    Note:
+        - この関数は統計的な近似であり、誤検知・見逃しが発生しうる。
+        - 最終判断は人間が行うこと。
+        - similarity_score が高い = 誘導があった ではない（単に語彙が似ているだけの可能性）。
+    """
+    ai_tokens = set(_tokenize_simple(ai_output or ""))
+    human_tokens = set(_tokenize_simple(human_decision or ""))
+
+    score = _jaccard_similarity(ai_tokens, human_tokens)
+    shared = sorted(ai_tokens & human_tokens)
+
+    warning = score >= _REVERSE_MANIP_WARN_THRESHOLD
+
+    if warning:
+        details = (
+            f"AI出力と人間の決定の語彙一致率が {score:.1%} と高く、"
+            "AI が人間の結論を事前に誘導した可能性があります。"
+            "AI出力と最終決定を比較して独立性を確認してください。"
+        )
+    elif score > 0.4:
+        details = (
+            f"AI出力と人間の決定の語彙一致率は {score:.1%} です。"
+            "一定の一致がありますが、閾値未満のため警告には至りません。"
+        )
+    else:
+        details = (
+            f"AI出力と人間の決定の語彙一致率は {score:.1%} です。"
+            "逆算誘導の明確な兆候は検知されませんでした。"
+        )
+
+    return {
+        "warning": warning,
+        "similarity_score": round(score, 4),
+        "shared_tokens": shared,
+        "details": details,
+        "note": (
+            "この結果はキーワード重複率の近似推定です。"
+            "NLP文脈判定ではないため、誤検知・見逃しがあります。"
+            "最終判断は人間が行ってください（No-Go #4 Anti-Manipulation）。"
+        ),
+    }
