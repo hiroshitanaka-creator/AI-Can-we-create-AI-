@@ -13,9 +13,11 @@ Privacy 方針（厳守）:
   - これは audit_log.py の設計方針と一致する（#6 Privacy 完全準拠）
 
 類似検索の仕組み:
-  - reason_codes の Jaccard 類似度で過去決定との類似度を計算
+  - reason_codes の Jaccard 類似度で過去決定との類似度を計算（デフォルト）
   - 類似度が高い = 似た制約・判断パターンの過去決定
   - raw text 比較は行わない（Privacy 保護）
+  - use_transformer=True にすると explanation テキストを
+    Mini Transformer でエンコードしたコサイン類似度に切り替え可能
 
 設計:
   - インメモリ（デフォルト）＋ JSON ファイル永続化（オプション）
@@ -39,6 +41,8 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from aicw.transformer import MiniTransformerEncoder, cosine_similarity
+
 
 # ---------------------------------------------------------------------------
 # エントリ構造
@@ -49,6 +53,7 @@ def _make_entry(
     status: str,
     reason_codes: List[str],
     blocked_by: Optional[str] = None,
+    explanation: str = "",
 ) -> Dict[str, Any]:
     """知識ベースの1エントリを生成する。"""
     return {
@@ -56,6 +61,7 @@ def _make_entry(
         "status": status,                          # "ok" | "blocked"
         "reason_codes": sorted(reason_codes),      # ソート済み（比較の一貫性）
         "blocked_by": blocked_by,                  # None | "#4" | "#5" | "#6"
+        "explanation_snippet": explanation[:120],  # 先頭120文字のみ（Privacy 保護）
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -85,6 +91,9 @@ class KnowledgeBase:
     Args:
         path: JSON ファイルのパス（None = インメモリのみ）
         max_entries: 最大保持エントリ数（古い順に削除。デフォルト 500）
+        use_transformer: True にすると explanation_snippet を
+                         Mini Transformer でエンコードしたコサイン類似度を使用。
+                         False（デフォルト）は reason_codes の Jaccard 類似度。
     """
 
     DEFAULT_MAX = 500
@@ -93,12 +102,17 @@ class KnowledgeBase:
         self,
         path: Optional[str] = None,
         max_entries: int = DEFAULT_MAX,
+        use_transformer: bool = False,
     ) -> None:
         if max_entries <= 0:
             raise ValueError("max_entries must be positive")
         self._path = path
         self._max = max_entries
         self._entries: List[Dict[str, Any]] = []
+        self._use_transformer = use_transformer
+        self._encoder: Optional[MiniTransformerEncoder] = (
+            MiniTransformerEncoder() if use_transformer else None
+        )
 
         if path and os.path.isfile(path):
             self._load(path)
@@ -112,6 +126,7 @@ class KnowledgeBase:
         status: str,
         reason_codes: List[str],
         blocked_by: Optional[str] = None,
+        explanation: str = "",
     ) -> Dict[str, Any]:
         """
         過去決定のメタデータを記録する。
@@ -121,6 +136,7 @@ class KnowledgeBase:
             status: "ok" または "blocked"
             reason_codes: selection.reason_codes（ok 時）
             blocked_by: blocked 時の No-Go コード
+            explanation: 判断説明テキスト（先頭120文字のみ保存）
 
         Returns:
             記録したエントリ
@@ -128,7 +144,7 @@ class KnowledgeBase:
         if status not in ("ok", "blocked"):
             raise ValueError(f"status must be 'ok' or 'blocked', got: {status!r}")
 
-        entry = _make_entry(decision_hash, status, reason_codes, blocked_by)
+        entry = _make_entry(decision_hash, status, reason_codes, blocked_by, explanation)
         self._entries.append(entry)
 
         # 上限超過: 最古エントリを削除
@@ -150,6 +166,7 @@ class KnowledgeBase:
         top_k: int = 3,
         min_similarity: float = 0.0,
         status_filter: Optional[str] = None,
+        query_text: str = "",
     ) -> List[Dict[str, Any]]:
         """
         reason_codes が似ている過去決定を返す。
@@ -159,17 +176,44 @@ class KnowledgeBase:
             top_k: 返す件数（デフォルト 3）
             min_similarity: 最低類似度（0.0〜1.0。デフォルト 0.0 = 全件）
             status_filter: "ok" / "blocked" で絞り込み（None = 全て）
+            query_text: use_transformer=True 時に使うクエリテキスト
 
         Returns:
-            類似度降順のエントリリスト（各エントリに "similarity" キーを追加）
+            類似度降順のエントリリスト（各エントリに "similarity" キーと
+            "similarity_method" キーを追加）
         """
         results = []
+        # Transformer モードはクエリテキストとエントリのスニペット両方が必要
+        use_tf = (
+            self._use_transformer
+            and self._encoder is not None
+            and bool(query_text)
+        )
+        q_vec = self._encoder.encode(query_text) if use_tf else None
+
         for entry in self._entries:
             if status_filter and entry["status"] != status_filter:
                 continue
-            sim = _jaccard(reason_codes, entry["reason_codes"])
+
+            if use_tf:
+                snippet = entry.get("explanation_snippet", "")
+                if snippet:
+                    sim = cosine_similarity(q_vec, self._encoder.encode(snippet))  # type: ignore[arg-type]
+                    method = "transformer_cosine"
+                else:
+                    # スニペットなし → Jaccard にフォールバック
+                    sim = _jaccard(reason_codes, entry["reason_codes"])
+                    method = "jaccard"
+            else:
+                sim = _jaccard(reason_codes, entry["reason_codes"])
+                method = "jaccard"
+
             if sim >= min_similarity:
-                results.append({**entry, "similarity": round(sim, 4)})
+                results.append({
+                    **entry,
+                    "similarity": round(sim, 4),
+                    "similarity_method": method,
+                })
 
         results.sort(key=lambda x: x["similarity"], reverse=True)
         return results[:top_k]
