@@ -7,24 +7,79 @@ Standard library only.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 DEFAULT_FILES = [
     "guideline.md",
+    "README.md",
     "progress_log.md",
     "idea_note.md",
 ]
 
 
-def _extract_unchecked_tasks(text: str) -> List[str]:
-    tasks: List[str] = []
+_ACTION_HEADING_HINTS = (
+    "current next actions",
+    "next actions",
+    "next steps",
+    "upcoming milestones",
+    "sprint plan",
+    "todo",
+)
+
+_BOLD_HEADING_WITH_SUFFIX_COLON_RE = re.compile(r"^\*\*(.+?)\*\*\s*:\s*$")
+_BOLD_HEADING_WITH_INNER_COLON_RE = re.compile(r"^\*\*(.+?:)\*\*\s*$")
+
+
+def _is_action_heading_text(heading: str) -> bool:
+    lowered = heading.lower().strip()
+    return any(hint in lowered for hint in _ACTION_HEADING_HINTS)
+
+
+def _classify_heading(line: str) -> Tuple[bool, bool]:
+    """Return (is_heading, is_action_heading)."""
+    stripped = line.strip()
+    lowered = stripped.lower()
+
+    if lowered.startswith("#"):
+        heading = lowered.lstrip("#").strip()
+        return True, _is_action_heading_text(heading)
+
+    # README の "**Upcoming Milestones (2026):**" / "**Todo**:" のような見出し記法に対応
+    # 太字行は「コロン付き」の場合のみ見出しとして扱い、通常の強調文を誤検知しない。
+    m = _BOLD_HEADING_WITH_SUFFIX_COLON_RE.match(stripped)
+    if not m:
+        m = _BOLD_HEADING_WITH_INNER_COLON_RE.match(stripped)
+    if m:
+        heading = m.group(1).strip().rstrip(":")
+        return True, _is_action_heading_text(heading)
+
+    return False, False
+
+
+def _extract_unchecked_tasks(text: str) -> List[Dict[str, object]]:
+    unchecked_anywhere: List[Dict[str, object]] = []
+    in_action_section = False
+
     for line in text.splitlines():
         stripped = line.strip()
+
+        is_heading, is_action_heading = _classify_heading(stripped)
+        if is_heading:
+            in_action_section = is_action_heading
+            continue
+
         if stripped.startswith("- [ ] "):
-            tasks.append(stripped[6:].strip())
-    return tasks
+            unchecked_anywhere.append(
+                {
+                    "task": stripped[6:].strip(),
+                    "is_action_scoped": in_action_section,
+                }
+            )
+
+    return unchecked_anywhere
 
 
 def _read_text(path: Path) -> str:
@@ -38,16 +93,33 @@ def build_suggestions(base_dir: Path, top_k: int = 3) -> Dict[str, object]:
     if top_k <= 0:
         raise ValueError("top_k must be positive")
 
-    all_tasks: List[Dict[str, str]] = []
+    all_tasks: List[Dict[str, object]] = []
     for rel in DEFAULT_FILES:
         p = base_dir / rel
         content = _read_text(p)
-        for task in _extract_unchecked_tasks(content):
-            all_tasks.append({"source": rel, "task": task})
+        for item in _extract_unchecked_tasks(content):
+            all_tasks.append(
+                {
+                    "source": rel,
+                    "task": item["task"],
+                    "is_action_scoped": bool(item["is_action_scoped"]),
+                }
+            )
 
-    # prioritize core guidance first, then ideas/progress.
-    priority = {"guideline.md": 0, "idea_note.md": 1, "progress_log.md": 2}
-    all_tasks.sort(key=lambda x: priority.get(x["source"], 9))
+    # 1) action-scoped を常に優先
+    # 2) その上で source 優先度を適用
+    priority = {
+        "guideline.md": 0,
+        "README.md": 1,
+        "idea_note.md": 2,
+        "progress_log.md": 3,
+    }
+    all_tasks.sort(
+        key=lambda x: (
+            0 if x["is_action_scoped"] else 1,
+            priority.get(str(x["source"]), 9),
+        )
+    )
 
     picked = all_tasks[:top_k]
     suggestions = []
