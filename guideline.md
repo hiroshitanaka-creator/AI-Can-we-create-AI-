@@ -195,3 +195,9 @@ python run_demo.py
 - [x] tests/test_audit_log.py 追加（26件）
 - [x] tests/test_ai_rights_experiment.py 追加（20件）
 - [x] tests/test_reverse_manipulation.py 追加（12件）
+
+## Next Phase Tasks（2026-03-09 session 18〜）
+- [x] bridge/po_core_bridge.py 追加（哲学テンソル統合 v0.1: W_eth/T_free/T_sub/Po 統一インターフェース）
+- [x] scripts/demo_business.py 追加（実ビジネスEnd-to-Endデモ: 3シナリオ・CLI対応）
+- [x] tests/test_po_core_bridge.py 追加（41件）
+- [x] tests/test_demo_business.py 追加（13件）
