@@ -1,6 +1,47 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-03-09 (session 17 — Next Phase: 監査ログ・AI権利実験・逆算誘導チェック)
+
+### Goal
+- スプリント10タスク完了後の次フェーズを開始する
+- Verifiable Decision Layer v0.1 安定化の一環として監査ログを実装
+- README Upcoming Milestones の「AI権利哲学的実験モジュール」を実装
+- idea_note backlog「逆算誘導チェック」を初期近似実装
+
+### Done
+- `aicw/audit_log.py`（新規）:
+  - `AuditEntry`: PII不含・決定メタデータのみ（ハッシュ/status/blocked_by/reason_codes/version/TTL）
+  - `AuditLog`: append / query / count / clear / summary / to_json
+  - `_compute_hash()`: SHA256（status + blocked_by + reason_codes。逆引き不可）
+  - TTL 付き（デフォルト 24 時間）。期限切れエントリは query で自動除外
+  - `record()` / `get_default_log()`: プロセス共有シングルトンへのショートカット
+- `aicw/ai_rights_experiment.py`（新規）:
+  - 3立場: `FULL_RIGHTS`（感性論）/ `CONDITIONAL`（機能倫理）/ `NO_RIGHTS`（道具主義）
+  - `analyze_ai_rights(question)`: 問いを3立場で構造化・relevance_note 付き
+  - `get_minority_position(majority_stance_id)`: 少数意見（他2立場）を返す
+  - disclaimer 強制挿入 / 生存構造倫理との接続ノート
+- `aicw/safety.py` 拡張:
+  - `check_reverse_manipulation(ai_output, human_decision)` を追加
+  - Jaccard 語彙類似度で AI→人間誘導リスクを推定（閾値 75%で warn）
+  - 汎用語除外トークナイザ・対称性保証・disclaimer 付き
+- `tests/test_audit_log.py`（新規）: 26件
+- `tests/test_ai_rights_experiment.py`（新規）: 20件
+- `tests/test_reverse_manipulation.py`（新規）: 12件
+- `README.md`: Roadmap の Verifiable Decision Layer を 🔬 → ✅ v0.1 stable に更新
+- `guideline.md`: Next Phase Tasks セクションを追加
+- `idea_note.md`: 逆算誘導チェックの Status を backlog → done に更新
+
+### Test Results
+- `python -m unittest discover -s tests -q` → **509 tests PASS**
+
+### Next Actions（候補）
+- 哲学テンソル統合の設計（Po_core との本格連携準備）
+- 実ビジネス意思決定支援デモの設計（非公開企業向け）
+- `check_reverse_manipulation` の NLP ベース強化（継続課題）
+
+---
+
 ## 2026-03-09 (session 16 — Ensemble Review CLI 追加)
 
 ### Goal

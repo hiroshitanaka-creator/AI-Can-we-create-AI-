@@ -122,16 +122,17 @@ python run_demo.py
 | :--- | :--- | :--- |
 | Core Principles definition | ✅ Complete | Status-invariant / Context-dep / Explainable |
 | Non-Negotiables spec | ✅ Complete | #3 / #4 / #6 auto-stop |
-| Verifiable Decision Layer | 🔬 Research | rules + templates |
-| Language Layer | 🔬 Research | summarization / counterargument listing |
+| Verifiable Decision Layer | ✅ v0.1 stable | audit_log + rule engine + テスト基盤 |
+| Language Layer | ✅ Implemented | context_compress / philosophy_check / ensemble |
 | Po_core integration | 🌱 Dream | 最終目標 |
 
 **Upcoming Milestones (2026):**
-- [ ] Verifiable Decision Layer v0.1 の安定化
-- [ ] 3人レビュー＋自動テスト基盤の実装
+- [x] Verifiable Decision Layer v0.1 の安定化（audit_log + 監査ハッシュ）
+- [x] 3人レビュー＋自動テスト基盤の実装（three_review CLI + ensemble）
+- [x] AI権利に関する哲学的実験モジュールの追加（ai_rights_experiment）
+- [x] 逆算誘導チェック（check_reverse_manipulation, No-Go #4 強化）
 - [ ] 哲学テンソル統合 (Po_coreとの本格連携)
 - [ ] 実ビジネス意思決定支援デモ (非公開企業向け)
-- [ ] AI権利に関する哲学的実験モジュールの追加
 
 ---
 
