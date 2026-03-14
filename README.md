@@ -208,7 +208,7 @@ print(result['summary'])
 | Language Layer | ✅ Implemented | context_compress / philosophy_check / ensemble |
 | Philosophy Tensor v0.1 | ✅ Implemented | po_core_bridge: W_eth/T_free/T_sub/Po |
 | Interactive Simulator | ✅ Implemented | interactive_sim.py（外部依存なし） |
-| Business Demo | ✅ Implemented | demo_business.py（3シナリオ） |
+| Business Demo | ✅ Implemented | demo_business.py（6シナリオ） |
 | Po_core 本格連携 | ✅ v1.0 Spec Drafted | bridge v0.1 + API 仕様書 v1.0 + 契約整合テスト |
 
 **Completed Milestones (2026):**
@@ -220,7 +220,7 @@ print(result['summary'])
 - [x] AI権利哲学的実験モジュール（3立場の緊張保持）
 - [x] 逆算誘導チェック（check_reverse_manipulation, No-Go #4 強化）
 - [x] 哲学テンソル統合 v0.1（po_core_bridge: W_eth/T_free/T_sub/Po）
-- [x] 実ビジネス意思決定支援デモ（3シナリオ End-to-End）
+- [x] 実ビジネス意思決定支援デモ（6シナリオ End-to-End）
 - [x] インタラクティブ意思決定シミュレーター（input() ベース CLI）
 - [x] オフライン知識ベース（Privacy 準拠・Jaccard 類似検索・JSON 永続化）
 
@@ -228,7 +228,7 @@ print(result['summary'])
 - [x] Po_core 本格連携 API 仕様書 v1.0
 - [x] meta_suggest の精度改善（No-Go チェックリスト誤検知修正）
 - [x] check_reverse_manipulation の NLP 強化
-- [ ] デモシナリオ追加（医療・教育・公共政策）
+- [x] デモシナリオ追加（医療・教育・公共政策）
 
 ---
 
