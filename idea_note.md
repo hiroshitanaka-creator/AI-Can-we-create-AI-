@@ -50,24 +50,25 @@
   - Notes: scripts/validate_request.py + aicw/schema.py として実装済み（exit code 0/1/2）
   - Status: done
 
-- [ ] (2026-02-22) Idea: Markdown入力アダプタ（Markdown→decision_request.v0 JSON変換）を後付けする
+- [x] (2026-02-22) Idea: Markdown入力アダプタ（Markdown→decision_request.v0 JSON変換）を後付けする
   - Source: AI
   - Why: JSON編集が苦手でも使えるようにする（ただしcanonicalはJSONのまま）
-  - Notes: 契約は壊さず”入口を増やす”だけ
-  - Status: backlog → 実装予定（session 9）
+  - Notes: `scripts/md_adapter.py` + `tests/test_md_adapter.py` として実装済み。契約（decision_request.v0）を維持したまま入口のみ追加
+  - Status: done
 
-- [ ] (2026-02-22) Idea:リスクと改善提案
+- [x] (2026-02-22) Idea:リスクと改善提案
 　- 誤検知の扱い
-　- 現状は全て severity="block" で止める設計。運用では warn と block を分け、人間の確認フローを入れると安全です。
+　- 現状は全て severity="block" で止める設計。運用では warn と block を分け、人間の確認フローを入れると安全です。（対応済み: `aicw/safety.py` で warn/block 段階化）
 　- 正規表現の脆弱性
 　- 例えばメールの正規表現は簡易版で、RFC準拠ではない。重要用途なら既存ライブラリや成熟したPII検出ライブラリを検討してください。
 　- コンテキスト判定の欠如
-　- scan_manipulation のような単純一致は文脈を無視するため、誤検知が多い。NLPベースの文脈判定（軽量モデルやルール＋スコアリング）を組み合わせると精度が上がります。
+　- scan_manipulation のような単純一致は文脈を無視するため、誤検知が多い。NLPベースの文脈判定（軽量モデルやルール＋スコアリング）を組み合わせると精度が上がります。（対応済み: スコアリング化 + reverse_manipulation を `P1-ngram` へ強化）
 　- 監査ログとメタ情報
-　- 何を検出したか（中身は保存しない）・いつ誰がブロックしたか等の監査ログを残す仕組みを入れると運用上安心です。
+　- 何を検出したか（中身は保存しない）・いつ誰がブロックしたか等の監査ログを残す仕組みを入れると運用上安心です。（対応済み: `aicw/audit_log.py`）
 　- テストカバレッジ
-　- 正規表現ごとに正例・負例のユニットテストを用意し、誤検知率を定量化して閾値を決めるべ
+　- 正規表現ごとに正例・負例のユニットテストを用意し、誤検知率を定量化して閾値を決めるべ（対応済み: 関連ユニットテスト拡充）
 　- きです。
+  - Status: done（主要提案は実装反映済み）
 
 - [ ] 具体的な小さな改善コード例（方針のみ）
 　- Finding.severity をルールごとに設定可能にする（現在は固定）。

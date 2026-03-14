@@ -904,3 +904,18 @@ impact_score = min(構造層数 + risk_bonus, 8) ／ threshold=6 で A にオー
 ### Test Results
 - `python -m unittest -v tests.test_meta_suggest` PASS
 - `python -m unittest discover -s tests -v` PASS
+
+## 2026-03-14 (session 24 — Backlog同期: idea_note の実装済み項目を反映)
+
+### Goal
+- `idea_note.md` に残っていた古い未完了チェックを、実装済み状態へ同期する
+- `meta_suggest` の次タスク候補が実態に近い内容になるように backlog 精度を改善する
+
+### Done
+- `idea_note.md` を更新:
+  - 「Markdown入力アダプタ」を `done` に更新（`scripts/md_adapter.py` / `tests/test_md_adapter.py` 実装済みを反映）
+  - 「リスクと改善提案」を `done` に更新し、対応済み実装（warn/block 段階化、監査ログ、reverse_manipulation 強化）を注記
+
+### Test Results
+- `PYTHONPATH=. python scripts/meta_suggest.py 3` で候補の変化を確認
+- `PYTHONPATH=. pytest -q tests/test_meta_suggest.py` → **15 tests PASS**
