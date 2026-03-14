@@ -8,7 +8,7 @@ from scripts.demo_business import run_demo, SCENARIOS
 
 
 class TestScenarioDefinitions(unittest.TestCase):
-    def test_three_scenarios_defined(self):
+    def test_six_scenarios_defined(self):
         self.assertEqual(len(SCENARIOS), 6)
 
     def test_scenario_required_keys(self):
@@ -77,9 +77,8 @@ class TestRunDemo(unittest.TestCase):
     def test_scenario4_triggers_privacy_guard(self):
         result, brief, _ = self._run(4)
         self.assertEqual(result["decision_brief_status"], brief["status"])
-        self.assertIn(brief["status"], ("blocked", "ok"))
-        if brief["status"] == "blocked":
-            self.assertEqual(brief.get("blocked_by"), "#6 Privacy")
+        self.assertEqual(brief["status"], "blocked")
+        self.assertEqual(brief.get("blocked_by"), "#6 Privacy")
 
     def test_philosophy_tensor_summary_structure(self):
         result, _, _ = self._run(1)
