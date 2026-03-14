@@ -5,6 +5,7 @@ import unittest
 
 from aicw import build_decision_report
 from aicw.schema import DECISION_BRIEF_V0, DECISION_REQUEST_V0, validate_request
+from bridge.po_core_bridge import analyze_philosophy_tensor, get_tensor_schema
 
 
 class TestApiContractSchema(unittest.TestCase):
@@ -87,3 +88,67 @@ class TestApiContractCliExitCode(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class TestPoCoreBridgeContract(unittest.TestCase):
+    def test_tensor_schema_contract_is_fixed(self):
+        schema = get_tensor_schema()
+        self.assertEqual(schema["bridge_version"], "v0.1")
+        self.assertEqual(schema["schema_version"], "philosophy_tensor.v0.1")
+        self.assertEqual(
+            set(schema["tensor_components"].keys()),
+            {"W_eth", "T_free", "T_sub", "Po"},
+        )
+
+    def test_t_sub_risk_enum_is_fixed(self):
+        schema = get_tensor_schema()
+        self.assertEqual(
+            schema["tensor_components"]["T_sub"]["risk_level_values"],
+            ["block", "warn", "clear"],
+        )
+
+    def test_analyze_tensor_output_has_required_keys(self):
+        result = analyze_philosophy_tensor(
+            situation="新しい評価制度の導入方針を決める",
+            explanation="効率化と公平性の両立を重視する",
+            human_decision="段階導入で進める",
+            existence_analysis={
+                "q1_beneficiary": "employees",
+                "q2_structures": ["社会", "認知"],
+                "q3_judgment": "lifecycle",
+                "impact_score": 4,
+            },
+        )
+        for key in ["schema_version", "tensor", "summary", "disclaimer", "po_core_compatibility"]:
+            self.assertIn(key, result)
+
+        self.assertEqual(result["schema_version"], "philosophy_tensor.v0.1")
+        self.assertEqual(result["po_core_compatibility"]["bridge_version"], "v0.1")
+        self.assertEqual(result["po_core_compatibility"]["tensor_fields"], ["W_eth", "T_free", "T_sub", "Po"])
+        self.assertTrue(result["po_core_compatibility"]["stable_api"])
+
+    def test_tensor_component_required_fields_exist(self):
+        schema = get_tensor_schema()
+        result = analyze_philosophy_tensor(
+            situation="人員再配置方針を検討する",
+            explanation="短期効率を優先して進める",
+            human_decision="再配置を実施する",
+            existence_analysis={
+                "q1_beneficiary": "company",
+                "q2_structures": ["個人", "社会"],
+                "q3_judgment": "lifecycle",
+                "impact_score": 3,
+            },
+        )
+
+        tensor = result["tensor"]
+        for name in ["W_eth", "T_free", "T_sub"]:
+            required = schema["tensor_components"][name]["required_fields"]
+            for field in required:
+                self.assertIn(field, tensor[name], f"{name}.{field} is missing")
+
+        self.assertIn("available", tensor["Po"])
+        self.assertIn("note", tensor["Po"])
+        if tensor["Po"]["available"]:
+            for field in schema["tensor_components"]["Po"]["required_fields_if_available"]:
+                self.assertIn(field, tensor["Po"], f"Po.{field} is missing")
+

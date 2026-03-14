@@ -1,6 +1,28 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-03-14 (session 23 — Po_core 連携 API 仕様書 v1.0)
+
+### Goal
+- 「次タスク」として Po_core 本格連携向け API 仕様書 v1.0 を整備する
+- `po_core_bridge` 契約をテストで固定化し、SemVer 運用ポリシーを明文化する
+
+### Done
+- `docs/api_spec_po_core_v1.md` を新規作成:
+  - `analyze_philosophy_tensor()` / `get_tensor_schema()` の入出力仕様を文書化
+  - 4テンソル（`W_eth`, `T_free`, `T_sub`, `Po`）の必須フィールドを明記
+  - Po_core 側推奨エラーコード（`POC-001`〜`POC-005`）と fail-closed 方針を明記
+  - `BRIDGE_VERSION = "v0.1"` 前提の後方互換ポリシーと Python 実装例を追加
+- `tests/test_api_contract.py` を拡張:
+  - bridge スキーマ（version / component / risk enum）固定テストを追加
+  - `analyze_philosophy_tensor()` のトップキー・互換メタ・テンソル必須キー検証を追加
+- `guideline.md` に `SemVer & API Contract Policy` を追記:
+  - patch/minor/major ごとの変更許容範囲
+  - 契約変更時の docs/tests 同時更新ルール
+
+### Test Results
+- `python -m unittest -v tests.test_api_contract` → **13 tests PASS**
+
 ## 2026-03-14 (session 22 — reverse_manipulation P1-ngram 強化)
 
 ### Goal

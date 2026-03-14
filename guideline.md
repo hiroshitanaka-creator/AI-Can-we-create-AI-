@@ -68,6 +68,17 @@ No-Go (#3/#4/#6) はこの原則の**派生**：
   を説明し、ユーザーの明示許可を取る
 - ログ最小化（PII/秘密情報/トークン等は絶対に書かない）
 
+
+## SemVer & API Contract Policy
+- `bridge/po_core_bridge.py` の公開境界は `BRIDGE_VERSION` と `TENSOR_SCHEMA_VERSION` を契約の基準とする。
+- patch（例: v0.1.x）では破壊的変更禁止。既存キー名・型・意味は維持する。
+- minor（v0.x）では optional フィールド追加のみ許可。
+- major（v1.0+）でのみ破壊的変更を許可し、同時に以下を更新する:
+  - `docs/api_spec_po_core_v1.md`
+  - `docs/api_contract_v0_1.md`（必要時）
+  - `tests/test_api_contract.py`
+- 契約変更時は「実装・ドキュメント・テスト」を同一コミットで更新する。
+
 ## Repo Working Rules（迷子防止）
 - SSOT（単一の真実）は次の4ファイル:
   - guideline.md
