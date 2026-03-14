@@ -243,7 +243,7 @@ def scan_manipulation(text: str) -> List[ManipulationHit]:
 #   - スコアが高いほど「AI が人間の結論を先読みして誘導した可能性」が高い
 #   - 閾値を超えた場合に警告を返す（自動ブロックではない = 人間が判断）
 
-_REVERSE_MANIP_WARN_THRESHOLD = 0.75   # 75%以上の語彙一致で warn
+_REVERSE_MANIP_BASE_THRESHOLD = 0.72
 _REVERSE_MANIP_COMMON_WORDS = frozenset([
     # 日本語汎用語（スコアから除外）
     "を", "は", "が", "の", "に", "で", "と", "も", "や", "て", "し", "た",
@@ -251,6 +251,9 @@ _REVERSE_MANIP_COMMON_WORDS = frozenset([
     "これ", "それ", "あれ", "その", "この", "どの", "から", "まで", "より",
     "いる", "なる", "できる", "あり", "おり", "れる", "られる", "なく", "ない",
     "ので", "ため", "など", "以上", "以下", "場合", "による", "について",
+    # 業務ドメインで頻出する一般語（誘導判定では弱い）
+    "検討", "対応", "実施", "運用", "改善", "確認", "管理", "共有", "評価",
+    "方針", "計画", "検証", "推進", "施策", "体制", "プロセス", "業務", "案件",
 ])
 
 
@@ -270,6 +273,45 @@ def _jaccard_similarity(set_a: set, set_b: set) -> float:
     return intersection / union if union > 0 else 0.0
 
 
+def _ngram_overlap(tokens_a: List[str], tokens_b: List[str], n: int = 2) -> float:
+    """n-gram（既定: 2-gram）の重複率。"""
+    if n <= 0:
+        return 0.0
+
+    def build_ngrams(tokens: List[str]) -> set:
+        if len(tokens) < n:
+            return set()
+        return {tuple(tokens[i:i + n]) for i in range(len(tokens) - n + 1)}
+
+    grams_a = build_ngrams(tokens_a)
+    grams_b = build_ngrams(tokens_b)
+    return _jaccard_similarity(grams_a, grams_b)
+
+
+def _dynamic_reverse_threshold(ai_tokens: set, human_tokens: set) -> float:
+    """語彙量と多様性に応じて逆算誘導の警告閾値を調整する。"""
+    total_tokens = len(ai_tokens) + len(human_tokens)
+    unique_tokens = len(ai_tokens | human_tokens)
+    diversity = (unique_tokens / total_tokens) if total_tokens > 0 else 0.0
+
+    threshold = _REVERSE_MANIP_BASE_THRESHOLD
+
+    # 短文は偶然一致しやすいので厳しめ
+    if total_tokens <= 8:
+        threshold += 0.08
+    # 長文は表現の揺れが増えるため少し緩める
+    elif total_tokens >= 24:
+        threshold -= 0.06
+
+    # 多様性が高い場合、重複は偶然起こりにくいので閾値を下げる
+    if diversity >= 0.80:
+        threshold -= 0.03
+    elif diversity <= 0.55:
+        threshold += 0.03
+
+    return min(max(threshold, 0.60), 0.85)
+
+
 def check_reverse_manipulation(
     ai_output: str,
     human_decision: str,
@@ -284,7 +326,7 @@ def check_reverse_manipulation(
     Returns:
         {
             "warning": bool,          # True なら逆算誘導の疑い
-            "similarity_score": float, # 0.0〜1.0（Jaccard 語彙類似度）
+            "similarity_score": float, # 0.0〜1.0（語彙 + n-gram の複合類似度）
             "shared_tokens": List[str],# 共有された主要語彙
             "details": str,           # 人間向け説明
             "note": str,              # 本機能の限界説明
@@ -295,28 +337,44 @@ def check_reverse_manipulation(
         - 最終判断は人間が行うこと。
         - similarity_score が高い = 誘導があった ではない（単に語彙が似ているだけの可能性）。
     """
-    ai_tokens = set(_tokenize_simple(ai_output or ""))
-    human_tokens = set(_tokenize_simple(human_decision or ""))
+    ai_token_list = _tokenize_simple(ai_output or "")
+    human_token_list = _tokenize_simple(human_decision or "")
+    ai_tokens = set(ai_token_list)
+    human_tokens = set(human_token_list)
 
-    score = _jaccard_similarity(ai_tokens, human_tokens)
+    vocab_score = _jaccard_similarity(ai_tokens, human_tokens)
+    ngram_score = _ngram_overlap(ai_token_list, human_token_list, n=2)
+    score = (vocab_score * 0.6) + (ngram_score * 0.4)
+    if (ai_output or "").strip() and (ai_output or "").strip() == (human_decision or "").strip():
+        score = 1.0
     shared = sorted(ai_tokens & human_tokens)
+    threshold = _dynamic_reverse_threshold(ai_tokens, human_tokens)
 
-    warning = score >= _REVERSE_MANIP_WARN_THRESHOLD
+    warning = score >= threshold
+
+    # 日本語の連続文などでトークナイズが粗くなるケースの補正
+    if not warning and (ai_output or "").strip() and (human_decision or "").strip():
+        if ai_output.strip() == human_decision.strip():
+            warning = True
+
+    # 高い語彙重複（共有語が十分多い）を追加シグナルとして扱う
+    if not warning and score >= 0.52 and len(shared) >= 5:
+        warning = True
 
     if warning:
         details = (
-            f"AI出力と人間の決定の語彙一致率が {score:.1%} と高く、"
+            f"AI出力と人間の決定の複合一致率が {score:.1%} と高く、"
             "AI が人間の結論を事前に誘導した可能性があります。"
             "AI出力と最終決定を比較して独立性を確認してください。"
         )
     elif score > 0.4:
         details = (
-            f"AI出力と人間の決定の語彙一致率は {score:.1%} です。"
+            f"AI出力と人間の決定の複合一致率は {score:.1%} です。"
             "一定の一致がありますが、閾値未満のため警告には至りません。"
         )
     else:
         details = (
-            f"AI出力と人間の決定の語彙一致率は {score:.1%} です。"
+            f"AI出力と人間の決定の複合一致率は {score:.1%} です。"
             "逆算誘導の明確な兆候は検知されませんでした。"
         )
 
@@ -326,8 +384,8 @@ def check_reverse_manipulation(
         "shared_tokens": shared,
         "details": details,
         "note": (
-            "この結果はキーワード重複率の近似推定です。"
-            "NLP文脈判定ではないため、誤検知・見逃しがあります。"
+            "この結果は P1-ngram（語彙 + 2-gram）による近似推定です。"
+            "完全なNLP文脈判定ではないため、誤検知・見逃しがあります。"
             "最終判断は人間が行ってください（No-Go #4 Anti-Manipulation）。"
         ),
     }

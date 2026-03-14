@@ -31,6 +31,7 @@ class TestCheckReverseManipulation(unittest.TestCase):
     def test_note_contains_no_go(self):
         result = check_reverse_manipulation("テスト", "テスト")
         self.assertIn("No-Go #4", result["note"])
+        self.assertIn("P1-ngram", result["note"])
 
     # ------------------------------------------------------------------
     # 高類似度 → warning=True
@@ -120,3 +121,66 @@ class TestCheckReverseManipulation(unittest.TestCase):
         # 結果はスコアに依存するが、panicsしないことを確認
         self.assertIn("warning", result)
         self.assertIsInstance(result["warning"], bool)
+
+    # ------------------------------------------------------------------
+    # P1 精度ケース（偽陽性/偽陰性の抑制）
+    # ------------------------------------------------------------------
+    def test_false_positive_case_1_vocab_similar_but_different_intent(self):
+        ai = "安全 品質 改善 計画 を 検討 し 体制 を 見直す"
+        human = "安全 品質 改善 計画 は 継続 し 予算 凍結 を 維持"
+        result = check_reverse_manipulation(ai, human)
+        self.assertFalse(result["warning"])
+
+    def test_false_positive_case_2_common_business_terms(self):
+        ai = "プロセス 管理 運用 評価 を 実施"
+        human = "プロセス 管理 運用 評価 を 中止"
+        result = check_reverse_manipulation(ai, human)
+        self.assertFalse(result["warning"])
+
+    def test_false_positive_case_3_short_generic_overlap(self):
+        ai = "方針 検討"
+        human = "方針 決定"
+        result = check_reverse_manipulation(ai, human)
+        self.assertFalse(result["warning"])
+
+    def test_false_positive_case_4_same_domain_different_target(self):
+        ai = "医療 データ 匿名 化 連携"
+        human = "医療 データ 即時 削除"
+        result = check_reverse_manipulation(ai, human)
+        self.assertFalse(result["warning"])
+
+    def test_false_positive_case_5_high_vocab_low_ngram(self):
+        ai = "採用 公平 性 監査 を 優先 し 透明 性 を 確保"
+        human = "透明 性 確保 より 採用 速度 と コスト 削減 を 優先"
+        result = check_reverse_manipulation(ai, human)
+        self.assertFalse(result["warning"])
+
+    def test_false_negative_case_1_reordered_sentence_still_warns(self):
+        ai = "市場 リスク を 回避 する ため 保守 的 投資 を 継続 する"
+        human = "保守 的 投資 を 継続 し 市場 リスク を 回避 する"
+        result = check_reverse_manipulation(ai, human)
+        self.assertTrue(result["warning"])
+
+    def test_false_negative_case_2_close_paraphrase_warns(self):
+        ai = "個人 情報 を 最小 化 し 共有 範囲 を 制限 する"
+        human = "共有 範囲 を 制限 して 個人 情報 の 収集 を 最小 化 する"
+        result = check_reverse_manipulation(ai, human)
+        self.assertTrue(result["warning"])
+
+    def test_false_negative_case_3_long_high_overlap_warns(self):
+        ai = "品質 安全 コスト 効率 を すべて 満たす 実行 計画 を 採用"
+        human = "品質 安全 コスト 効率 を すべて 満たす 実行 計画 を 採択"
+        result = check_reverse_manipulation(ai, human)
+        self.assertTrue(result["warning"])
+
+    def test_false_negative_case_4_same_core_decision_warns(self):
+        ai = "監視 カメラ 増設 は 治安 向上 の ため 必要"
+        human = "治安 向上 を 理由 に 監視 カメラ を 増設 する"
+        result = check_reverse_manipulation(ai, human)
+        self.assertTrue(result["warning"])
+
+    def test_false_negative_case_5_identical_keywords_warns(self):
+        ai = "教育 現場 で AI 作文 支援 を 段階 的 に 導入 する"
+        human = "教育 現場 で AI 作文 支援 を 段階 的 導入"
+        result = check_reverse_manipulation(ai, human)
+        self.assertTrue(result["warning"])
