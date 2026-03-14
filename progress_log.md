@@ -1,6 +1,28 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-03-14 (session 23 — Po_core API仕様書 v1.0 固定)
+
+### Goal
+- Po_core 本格連携に向けて API 仕様書 v1.0 を作成し、実装スキーマとの不一致を自動検知できる状態にする
+
+### Done
+- `docs/api_spec_po_core_v1.md`（新規）:
+  - `analyze_philosophy_tensor()` / `get_tensor_schema()` の契約を文書化
+  - Canonical Snapshot（JSON）を仕様の正として埋め込み
+  - 互換性ポリシー（schema_version の破壊的変更扱い）を明記
+- `tests/test_po_core_api_spec.py`（新規）:
+  - 仕様書内の Canonical Snapshot を抽出して `get_tensor_schema()` と完全一致を検証
+- `README.md`:
+  - Roadmap の Po_core 本格連携ステータスを更新
+  - Next Phase の 3項目（API仕様書 / meta_suggest 精度改善 / reverse_manipulation NLP強化）を done へ同期
+- `guideline.md`:
+  - Current Next Actions の完了項目に API仕様書v1.0 と契約整合テストを追記
+
+### Test Results
+- `python -m unittest -v tests.test_po_core_api_spec` → **1 test PASS**
+- `python -m unittest -v tests.test_po_core_bridge` → **34 tests PASS**
+
 ## 2026-03-14 (session 22 — reverse_manipulation P1-ngram 強化)
 
 ### Goal
