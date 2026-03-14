@@ -223,3 +223,7 @@ python run_demo.py
 - [x] aicw/knowledge_base.py 追加（オフライン知識ベース: ハッシュ+reason_codesのみ保存・Jaccard類似検索・JSON永続化）
 - [x] tests/test_interactive_sim.py 追加（18件）
 - [x] tests/test_knowledge_base.py 追加（34件）
+
+## Next Phase Tasks（2026-03-14 session 24〜）
+- [x] aicw/safety.py の privacy severity をルール単位で上書き可能化（`severity_overrides`）
+- [x] tests/test_p0_privacy.py に severity override の回帰テスト追加（SECRET_KEYWORD warn化 / IP_LIKE block化）

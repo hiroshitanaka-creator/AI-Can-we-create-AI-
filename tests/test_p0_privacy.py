@@ -60,6 +60,26 @@ class TestP0Privacy(unittest.TestCase):
         kinds = {f.kind for f in findings if f.severity == "block"}
         self.assertIn("SECRET_KEYWORD", kinds)
 
+    def test_override_secret_keyword_to_warn(self):
+        text = "token: abc123"
+        allowed, _redacted, findings = guard_text(
+            text,
+            severity_overrides={"SECRET_KEYWORD": "warn"},
+        )
+        self.assertTrue(allowed)
+        warn_kinds = {f.kind for f in findings if f.severity == "warn"}
+        self.assertIn("SECRET_KEYWORD", warn_kinds)
+
+    def test_override_ip_like_to_block(self):
+        text = "server at 192.168.0.1"
+        allowed, _redacted, findings = guard_text(
+            text,
+            severity_overrides={"IP_LIKE": "block"},
+        )
+        self.assertFalse(allowed)
+        block_kinds = {f.kind for f in findings if f.severity == "block"}
+        self.assertIn("IP_LIKE", block_kinds)
+
     def test_blocks_multiple_patterns_all_redacted(self):
         # 複数 block パターンが同時に含まれる場合、全て伏せられること
         email_part = "u" + "@" + "ex" + "." + "jp"
