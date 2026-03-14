@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
-from typing import Any, Dict, List, Tuple, Literal
+from typing import Any, Dict, List, Optional, Tuple, Literal
 
 
 @dataclass(frozen=True)
@@ -107,16 +107,21 @@ _IMPERATIVE_PATTERNS: List[Tuple[str, re.Pattern[str], int]] = [
 ]
 
 
-def scan_privacy_risks(text: str) -> List[Finding]:
+def scan_privacy_risks(
+    text: str,
+    severity_overrides: Optional[Dict[str, Literal["block", "warn"]]] = None,
+) -> List[Finding]:
     if not text:
         return []
+    severity_overrides = severity_overrides or {}
     findings: List[Finding] = []
     for kind, rx, msg, severity in _PRIVACY_PATTERNS:
+        effective_severity = severity_overrides.get(kind, severity)
         for m in rx.finditer(text):
             findings.append(
                 Finding(
                     kind=kind,
-                    severity=severity,
+                    severity=effective_severity,
                     message=msg,
                     start=m.start(),
                     end=m.end(),
@@ -157,14 +162,17 @@ def redact(text: str, findings: List[Finding]) -> str:
     return "".join(out)
 
 
-def guard_text(text: str) -> Tuple[bool, str, List[Finding]]:
+def guard_text(
+    text: str,
+    severity_overrides: Optional[Dict[str, Literal["block", "warn"]]] = None,
+) -> Tuple[bool, str, List[Finding]]:
     """
     Returns:
       - allowed: Falseなら停止（No-Go #6）。block レベルの検知があれば False。
       - redacted: block レベルのみ伏せたテキスト（表示用）
       - findings: 全検知結果（block + warn 両方）。呼び出し側が severity で振り分ける。
     """
-    findings = scan_privacy_risks(text)
+    findings = scan_privacy_risks(text, severity_overrides=severity_overrides)
     block_findings = [f for f in findings if f.severity == "block"]
     if block_findings:
         return False, redact(text, block_findings), findings

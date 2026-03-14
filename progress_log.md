@@ -1,6 +1,29 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-03-14 (session 24 — privacy severity override 対応)
+
+### Goal
+- 「次のタスク」として idea_note backlog の小改善を1件進める
+- privacy 検知の `Finding.severity` をルール単位で切り替え可能にする
+
+### Done
+- `aicw/safety.py` を更新:
+  - `scan_privacy_risks()` に `severity_overrides` を追加
+  - `guard_text()` に `severity_overrides` を追加し、検知結果の `block/warn` を呼び出し側で上書き可能化
+  - 既存呼び出し互換性は維持（引数は optional）
+- `tests/test_p0_privacy.py` を更新:
+  - `SECRET_KEYWORD` を `warn` に上書きした場合に block されないことを検証
+  - `IP_LIKE` を `block` に上書きした場合に停止することを検証
+- `idea_note.md`:
+  - 「具体的な小さな改善コード例」の先頭項目（severity 可変化）を done 化
+- `guideline.md`:
+  - session 24 タスクセクションを追加して完了項目を同期
+
+### Test Results
+- `python -m unittest -v tests.test_p0_privacy` → **18 tests PASS**
+- `python -m unittest -v tests.test_p0_manipulation tests.test_reverse_manipulation` → **40 tests PASS**
+
 ## 2026-03-14 (session 23 — Po_core API仕様書 v1.0 固定)
 
 ### Goal
