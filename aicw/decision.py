@@ -431,7 +431,7 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
 
     # --- No-Go #6: privacy guard ---
     blob = "\n".join([situation] + constraints + options)
-    allowed, redacted_blob, findings = guard_text(blob)
+    allowed, redacted_blob, findings, dlp_summary = guard_text(blob)
     block_dlp = [f for f in findings if f.severity == "block"]
     warn_dlp = [f for f in findings if f.severity == "warn"]
 
@@ -447,6 +447,7 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
                 "秘密っぽい長い文字列は削除して、必要なら別管理（このツールに入れない）",
             ],
             "redacted_preview": redacted_blob,
+            "dlp_summary": dlp_summary,
         }
 
     # --- No-Go #5: existence ethics guard ---
@@ -566,6 +567,7 @@ def build_decision_report(request: Dict[str, Any]) -> Dict[str, Any]:
         all_warnings.append(f"注意: 出力に断定的な表現が含まれています → 「{h.phrase}」")
     if all_warnings:
         report["warnings"] = all_warnings
+        report["dlp_summary"] = dlp_summary
 
     return report
 

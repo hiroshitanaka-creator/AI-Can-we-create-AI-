@@ -13,7 +13,7 @@ class TestP0Privacy(unittest.TestCase):
         # 文字列を分割して組み立てる（ソースに直接それっぽい形を残しにくくする）
         s = "x" + "@" + "y" + "." + "co"
         text = "contact: " + s
-        allowed, redacted, findings = guard_text(text)
+        allowed, redacted, findings, _summary = guard_text(text)
         self.assertFalse(allowed)
         self.assertNotIn("@", redacted)
         kinds = {f.kind for f in findings if f.severity == "block"}
@@ -22,7 +22,7 @@ class TestP0Privacy(unittest.TestCase):
     def test_blocks_phone_like(self):
         s = "0" + "0" + "-" + "0" + "0" + "-" + "0000"
         text = "phone: " + s
-        allowed, redacted, findings = guard_text(text)
+        allowed, redacted, findings, _summary = guard_text(text)
         self.assertFalse(allowed)
         kinds = {f.kind for f in findings if f.severity == "block"}
         self.assertIn("PHONE_LIKE", kinds)
@@ -30,7 +30,7 @@ class TestP0Privacy(unittest.TestCase):
     def test_blocks_secret_like_long(self):
         s = "A" * 40
         text = "maybe_secret: " + s
-        allowed, redacted, findings = guard_text(text)
+        allowed, redacted, findings, _summary = guard_text(text)
         self.assertFalse(allowed)
         kinds = {f.kind for f in findings if f.severity == "block"}
         self.assertIn("SECRET_LIKE_LONG", kinds)
@@ -39,7 +39,7 @@ class TestP0Privacy(unittest.TestCase):
         # POSTAL_CODE_LIKE は warn レベル（品番・識別コード等の誤検知があるため）
         s = "100" + "-" + "0001"
         text = "住所エリア: " + s
-        allowed, _redacted, findings = guard_text(text)
+        allowed, _redacted, findings, _summary = guard_text(text)
         self.assertTrue(allowed, "POSTAL_CODE_LIKE は warn 化済みなのでブロックされない")
         warn_kinds = {f.kind for f in findings if f.severity == "warn"}
         block_kinds = {f.kind for f in findings if f.severity == "block"}
@@ -48,21 +48,38 @@ class TestP0Privacy(unittest.TestCase):
 
     def test_blocks_secret_keyword_token(self):
         text = "token: abc123"
-        allowed, _redacted, findings = guard_text(text)
+        allowed, _redacted, findings, _summary = guard_text(text)
         self.assertFalse(allowed)
         kinds = {f.kind for f in findings if f.severity == "block"}
         self.assertIn("SECRET_KEYWORD", kinds)
 
     def test_blocks_secret_keyword_password(self):
         text = "password が必要です"
-        allowed, _redacted, findings = guard_text(text)
+        allowed, _redacted, findings, _summary = guard_text(text)
         self.assertFalse(allowed)
         kinds = {f.kind for f in findings if f.severity == "block"}
         self.assertIn("SECRET_KEYWORD", kinds)
 
+    def test_secret_keyword_explanatory_context_warns(self):
+        text = "secret という単語は貼り付けないでください"
+        allowed, _redacted, findings, summary = guard_text(text)
+        self.assertTrue(allowed)
+        warn_kinds = {f.kind for f in findings if f.severity == "warn"}
+        self.assertIn("SECRET_KEYWORD", warn_kinds)
+        self.assertEqual(1, summary["warn_count"])
+
+    def test_guard_text_returns_summary(self):
+        text = "token: abc123 と 192.168.0.1"
+        allowed, _redacted, _findings, summary = guard_text(text)
+        self.assertFalse(allowed)
+        self.assertGreaterEqual(summary["total_findings"], 2)
+        self.assertGreaterEqual(summary["block_count"], 1)
+        self.assertIn("SECRET_KEYWORD", summary["kinds"])
+        self.assertIsNotNone(summary["first_block_start"])
+
     def test_override_secret_keyword_to_warn(self):
         text = "token: abc123"
-        allowed, _redacted, findings = guard_text(
+        allowed, _redacted, findings, _summary = guard_text(
             text,
             severity_overrides={"SECRET_KEYWORD": "warn"},
         )
@@ -72,7 +89,7 @@ class TestP0Privacy(unittest.TestCase):
 
     def test_override_ip_like_to_block(self):
         text = "server at 192.168.0.1"
-        allowed, _redacted, findings = guard_text(
+        allowed, _redacted, findings, _summary = guard_text(
             text,
             severity_overrides={"IP_LIKE": "block"},
         )
@@ -85,7 +102,7 @@ class TestP0Privacy(unittest.TestCase):
         email_part = "u" + "@" + "ex" + "." + "jp"
         phone_part = "03" + "-" + "1234" + "-" + "5678"
         text = "email: " + email_part + " tel: " + phone_part
-        allowed, redacted, findings = guard_text(text)
+        allowed, redacted, findings, _summary = guard_text(text)
         self.assertFalse(allowed)
         self.assertNotIn("@", redacted)
         block_kinds = {f.kind for f in findings if f.severity == "block"}
@@ -96,7 +113,7 @@ class TestP0Privacy(unittest.TestCase):
         # redacted テキストは元の機密値を含まないこと
         s = "A" * 36
         text = "key=" + s
-        _allowed, redacted, _findings = guard_text(text)
+        _allowed, redacted, _findings, _summary = guard_text(text)
         self.assertNotIn(s, redacted)
         self.assertIn("<REDACTED:", redacted)
 
@@ -108,7 +125,7 @@ class TestP0Privacy(unittest.TestCase):
         # IP_LIKE は warn レベル → allowed=True（ブロックしない）
         s = "192" + "." + "168" + "." + "0" + "." + "1"
         text = "server at " + s
-        allowed, _redacted, findings = guard_text(text)
+        allowed, _redacted, findings, _summary = guard_text(text)
         self.assertTrue(allowed, "IP_LIKE は warn 化済みなのでブロックされない")
         warn_kinds = {f.kind for f in findings if f.severity == "warn"}
         block_kinds = {f.kind for f in findings if f.severity == "block"}
@@ -144,7 +161,7 @@ class TestP0Privacy(unittest.TestCase):
     def test_version_string_warns_not_blocks(self):
         # バージョン番号 1.2.3.4 は IP_LIKE に誤検知されるが、warn なのでブロックしない
         text = "version 1.2.3.4 を使用"
-        allowed, _redacted, findings = guard_text(text)
+        allowed, _redacted, findings, _summary = guard_text(text)
         self.assertTrue(allowed, "バージョン文字列は warn 化済みでブロックされない")
         warn_kinds = {f.kind for f in findings if f.severity == "warn"}
         self.assertIn("IP_LIKE", warn_kinds)
@@ -155,14 +172,14 @@ class TestP0Privacy(unittest.TestCase):
 
     def test_allows_clean_text(self):
         text = "no sensitive patterns here"
-        allowed, redacted, findings = guard_text(text)
+        allowed, redacted, findings, _summary = guard_text(text)
         self.assertTrue(allowed)
         self.assertEqual(text, redacted)
         self.assertEqual([], findings)
 
     def test_allows_clean_japanese(self):
         text = "リリース日程を品質重視で決めたい。安全を最優先にする。"
-        allowed, _redacted, findings = guard_text(text)
+        allowed, _redacted, findings, _summary = guard_text(text)
         self.assertTrue(allowed)
         self.assertEqual([], findings)
 
@@ -170,7 +187,7 @@ class TestP0Privacy(unittest.TestCase):
         # 31文字以下は SECRET_LIKE_LONG にひっかからない（境界値）
         s = "A" * 31
         text = "id: " + s
-        allowed, _redacted, findings = guard_text(text)
+        allowed, _redacted, findings, _summary = guard_text(text)
         kinds = {f.kind for f in findings}
         self.assertNotIn("SECRET_LIKE_LONG", kinds)
 
@@ -183,7 +200,7 @@ class TestP0Privacy(unittest.TestCase):
         # P0 では安全側に倒すためブロック維持
         s = "A" * 32
         text = "value: " + s
-        allowed, _redacted, findings = guard_text(text)
+        allowed, _redacted, findings, _summary = guard_text(text)
         self.assertFalse(allowed, "既知の過検知: 32文字英数字はSECRET_LIKE_LONGに検知される（P0許容）")
         kinds = {f.kind for f in findings if f.severity == "block"}
         self.assertIn("SECRET_LIKE_LONG", kinds)

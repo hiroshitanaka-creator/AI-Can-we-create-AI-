@@ -150,6 +150,7 @@ No-Go (#3/#4/#6) はこの原則の**派生**：
 - [x] impact_map（影響範囲マップ）を decision_brief に追加（受益者×影響構造 Markdown テーブル）
 - [x] scripts/three_review.py（3者レビューCLI: Builder/Skeptic/User）を実装
 - [x] scripts/demo_business.py の単体実行導線を修正（sys.path 追加で ModuleNotFoundError を防止）
+- [x] P1: SECRET_KEYWORD の説明文脈を warn 化し、guard_text に検知サマリ（件数/種類/最初の位置）を追加
 
 ## How to run / test
 
