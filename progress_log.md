@@ -1,3 +1,30 @@
+## 2026-03-14 (session 25 — 永続保存境界の最小化)
+
+### Goal
+- 「次のタスク」として idea_note backlog の「候補案の全文は保存しない」を実装で固定する
+- decision 出力（表示）と保存レコード（永続化）を分離し、Privacy 方針を明確化する
+
+### Done
+- `aicw/decision.py` を更新:
+  - `build_persistence_record(report)` を追加
+  - 保存レコードを最小メタデータ（ok: `recommended_id/reason_codes`、blocked: `blocked_by/detected`）に限定
+  - `input` / `candidates.summary` / `selection.explanation` などの全文テキストを保存対象から除外
+  - 安定追跡用 `record_hash`（SHA256）を追加
+- `aicw/__init__.py`:
+  - `build_persistence_record` を公開 API に追加
+- `tests/test_persistence_record.py`（新規）:
+  - ok/blocked の両系で最小保存項目のみ出力されることを検証
+  - 保存禁止フィールド（`input` / `candidates` / `explanation` など）が含まれないことを回帰テスト化
+  - 不正 status で `ValueError` を返す異常系を追加
+- `idea_note.md`:
+  - 該当 backlog 項目を `done` に更新
+
+### Test Results
+- `python -m unittest -v tests.test_persistence_record` → **3 tests PASS**
+- `python -m unittest -v tests.test_api_contract` → **12 tests PASS**
+
+---
+
 ## 2026-03-14 (session 20 — Privacyガードの文脈判定改善)
 
 ### Goal
