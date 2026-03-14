@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 
 
@@ -100,6 +101,25 @@ class TestRunSimulation(unittest.TestCase):
         result = run_simulation(auto=True, json_mode=True, record_to_kb=False)
         self.assertFalse(result["knowledge_recorded"])
 
+    def test_kb_path_persists_records(self):
+        from scripts.interactive_sim import run_simulation
+        with tempfile.TemporaryDirectory() as td:
+            kb_path = os.path.join(td, "kb.json")
+            result = run_simulation(
+                auto=True,
+                json_mode=True,
+                record_to_kb=True,
+                kb_path=kb_path,
+            )
+            self.assertTrue(result["knowledge_recorded"])
+            self.assertTrue(os.path.isfile(kb_path))
+
+    def test_interactive_decline_kb_record(self):
+        from scripts.interactive_sim import run_simulation
+        stdin = io.StringIO("\n\n\n\n\nN\n")
+        result = run_simulation(auto=False, json_mode=True, stdin=stdin, record_to_kb=True)
+        self.assertFalse(result["knowledge_recorded"])
+
 
 class TestInteractiveSimCLI(unittest.TestCase):
     """CLI の動作テスト（サブプロセスで実行）"""
@@ -136,6 +156,13 @@ class TestInteractiveSimCLI(unittest.TestCase):
     def test_no_kb_flag(self):
         proc = self._run("--auto", "--no-kb")
         self.assertEqual(proc.returncode, 0)
+
+    def test_kb_path_flag(self):
+        with tempfile.TemporaryDirectory() as td:
+            kb_path = os.path.join(td, "cli_kb.json")
+            proc = self._run("--auto", "--kb-path", kb_path)
+            self.assertEqual(proc.returncode, 0, msg=proc.stderr)
+            self.assertTrue(os.path.isfile(kb_path))
 
     def test_audit_hash_in_output(self):
         proc = self._run("--auto")

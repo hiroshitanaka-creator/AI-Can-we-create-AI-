@@ -168,6 +168,12 @@ def display_result(
     knowledge_similar: Optional[List[Dict[str, Any]]] = None,
 ) -> None:
     """分析結果を人間が読みやすい形式で表示する。"""
+    if knowledge_similar:
+        _print_section("過去類似決定（参考）")
+        for i, past in enumerate(knowledge_similar[:3], 1):
+            print(f"  [{i}] {past['timestamp_utc'][:10]} | {past['status']} "
+                  f"| {past['reason_codes']} | 類似度 {past['similarity']:.2f}")
+
     _print_section("意思決定ブリーフ")
     status = brief.get("status")
     print(f"  status: {status}")
@@ -214,12 +220,6 @@ def display_result(
     if t_sub.get("reverse_manipulation_warning"):
         print(f"  ⚠ 逆算誘導警告（スコア {t_sub['reverse_similarity_score']:.2f}）")
 
-    if knowledge_similar:
-        _print_section("過去類似決定（参考）")
-        for i, past in enumerate(knowledge_similar[:3], 1):
-            print(f"  [{i}] {past['timestamp_utc'][:10]} | {past['status']} "
-                  f"| {past['reason_codes']} | 類似度 {past['similarity']:.2f}")
-
     print(f"\n{_SEPARATOR}")
     print(f"  {_DISCLAIMER}")
     print(_SEPARATOR)
@@ -234,6 +234,7 @@ def run_simulation(
     json_mode: bool = False,
     stdin: IO[str] = None,
     record_to_kb: bool = True,
+    kb_path: str = "",
 ) -> Dict[str, Any]:
     """
     シミュレーションを実行して結果を返す。
@@ -296,19 +297,28 @@ def run_simulation(
     )
 
     # Step 5: 知識ベース（類似検索 + 記録）
-    kb = KnowledgeBase()
+    kb = KnowledgeBase(path=kb_path or None)
     similar = []
     if record_to_kb:
         reason_codes = []
         if brief["status"] == "ok":
             reason_codes = brief.get("selection", {}).get("reason_codes", [])
         similar = kb.find_similar(reason_codes, top_k=3)
-        kb.record(
-            decision_hash=entry.decision_hash,
-            status=brief["status"],
-            reason_codes=reason_codes,
-            blocked_by=brief.get("blocked_by"),
-        )
+        save_to_kb = True
+        if not auto:
+            answer = _prompt("\n今回の決定を KB に保存しますか？ (Y/n)", default="Y", stdin=stdin)
+            save_to_kb = answer.strip().lower() not in ("n", "no")
+
+        if save_to_kb:
+            kb.record(
+                decision_hash=entry.decision_hash,
+                status=brief["status"],
+                reason_codes=reason_codes,
+                blocked_by=brief.get("blocked_by"),
+            )
+            record_to_kb = True
+        else:
+            record_to_kb = False
 
     # Step 6: 表示 or JSON 出力
     if not json_mode:
@@ -344,6 +354,11 @@ def main() -> int:
         "--no-kb", action="store_true",
         help="知識ベースへの記録をスキップする",
     )
+    parser.add_argument(
+        "--kb-path",
+        default="",
+        help="知識ベースJSONの保存/読込パス（未指定時はインメモリ）",
+    )
     args = parser.parse_args()
 
     try:
@@ -351,6 +366,7 @@ def main() -> int:
             auto=args.auto,
             json_mode=args.json,
             record_to_kb=not args.no_kb,
+            kb_path=args.kb_path,
         )
     except KeyboardInterrupt:
         print("\n\n  中断しました。またいつでも使ってください。")
