@@ -29,8 +29,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from typing import Any, Dict
+
+
+# プロジェクトルートを sys.path に追加（スクリプト単体実行対応）
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 # ---------------------------------------------------------------------------

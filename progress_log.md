@@ -919,3 +919,23 @@ impact_score = min(構造層数 + risk_bonus, 8) ／ threshold=6 で A にオー
 ### Test Results
 - `PYTHONPATH=. python scripts/meta_suggest.py 3` で候補の変化を確認
 - `PYTHONPATH=. pytest -q tests/test_meta_suggest.py` → **15 tests PASS**
+
+## 2026-03-14 (session 20 — demo_business CLI導線修正 + シナリオ4 Privacy保証)
+
+### Goal
+- 「次のタスク」として demo_business の運用導線とシナリオ4の安全性期待値を固定する
+
+### Done
+- `scripts/demo_business.py`:
+  - スクリプト単体実行時の `ModuleNotFoundError: No module named 'aicw'` を防ぐため、プロジェクトルートを `sys.path` に追加
+- `tests/test_demo_business.py`:
+  - `test_three_scenarios_defined` を実態に合わせて `test_six_scenarios_defined` に改名
+  - シナリオ4（医療）の期待を厳格化し、`status == blocked` かつ `blocked_by == "#6 Privacy"` を必須化
+
+### Test Results
+- `python -m unittest -v tests.test_demo_business` → **25 tests PASS**
+- `python scripts/demo_business.py --json --scenario 4` → **実行成功 / #6 Privacy blocked を確認**
+
+### Next Actions（候補）
+- `docs/next_issues.md` Issue #3: `check_reverse_manipulation` の精度強化（追加 10 ケース）
+- `idea_note.md` backlog: 「候補案の全文を保存しない」運用を decision 出力/保存境界で明文化
