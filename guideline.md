@@ -214,6 +214,8 @@ python run_demo.py
 - [x] scripts/demo_business.py 追加（実ビジネスEnd-to-Endデモ: 3シナリオ・CLI対応）
 - [x] tests/test_po_core_bridge.py 追加（41件）
 - [x] tests/test_demo_business.py 追加（13件）
+- [x] docs/api_spec_po_core_v1.md 追加（Po_core 連携 API 仕様書 v1.0）
+- [x] tests/test_po_core_api_spec.py 追加（仕様書と get_tensor_schema() の契約整合）
 
 ## Next Phase Tasks（2026-03-09 session 19〜）
 - [x] scripts/interactive_sim.py 追加（インタラクティブ意思決定シミュレーター: input()ベース・外部依存なし）

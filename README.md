@@ -209,7 +209,7 @@ print(result['summary'])
 | Philosophy Tensor v0.1 | ✅ Implemented | po_core_bridge: W_eth/T_free/T_sub/Po |
 | Interactive Simulator | ✅ Implemented | interactive_sim.py（外部依存なし） |
 | Business Demo | ✅ Implemented | demo_business.py（3シナリオ） |
-| Po_core 本格連携 | 🌱 Next Phase | bridge v0.1 は完成。API 仕様書を整備中 |
+| Po_core 本格連携 | ✅ v1.0 Spec Drafted | bridge v0.1 + API 仕様書 v1.0 + 契約整合テスト |
 
 **Completed Milestones (2026):**
 - [x] Verifiable Decision Layer v0.1 安定化（audit_log + 監査ハッシュ）
@@ -225,9 +225,9 @@ print(result['summary'])
 - [x] オフライン知識ベース（Privacy 準拠・Jaccard 類似検索・JSON 永続化）
 
 **Next Phase (Issues → `docs/next_issues.md`):**
-- [ ] Po_core 本格連携 API 仕様書 v1.0
-- [ ] meta_suggest の精度改善（No-Go チェックリスト誤検知修正）
-- [ ] check_reverse_manipulation の NLP 強化
+- [x] Po_core 本格連携 API 仕様書 v1.0
+- [x] meta_suggest の精度改善（No-Go チェックリスト誤検知修正）
+- [x] check_reverse_manipulation の NLP 強化
 - [ ] デモシナリオ追加（医療・教育・公共政策）
 
 ---
