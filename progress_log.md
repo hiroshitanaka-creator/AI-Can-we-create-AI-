@@ -1,3 +1,34 @@
+## 2026-03-14 (session 20 — Privacyガードの文脈判定改善)
+
+### Goal
+- 次タスクとして idea_note の「具体的な小さな改善コード例（方針のみ）」を進める
+- SECRET_KEYWORD の説明用途誤検知を下げる
+- `guard_text()` に検出サマリを追加して運用観測性を上げる
+
+### Done
+- `aicw/safety.py`:
+  - `SECRET_KEYWORD` 向けに説明文脈ヒューリスティクスを追加
+  - `token:` / `password=` 形式の実値提示は block 維持
+  - `guard_text()` が `summary`（件数・種類・最初の位置）を返すよう拡張
+- `aicw/decision.py`:
+  - `guard_text()` の新戻り値に追従
+  - #6 blocked レスポンスと warning 付き OK レスポンスへ `dlp_summary` を接続
+- `tests/test_p0_privacy.py`:
+  - 説明用途の `SECRET_KEYWORD` が warn になる回帰テストを追加
+  - `guard_text()` の summary 構造を検証するテストを追加
+- `idea_note.md`:
+  - 「具体的な小さな改善コード例」の未完了2項目を done に更新
+
+### Test Results
+- `python -m unittest tests/test_p0_privacy.py -q` → **20 tests PASS**
+- `python -m unittest tests/test_meta_suggest.py tests/test_reverse_manipulation.py tests/test_api_contract.py tests/test_interactive_sim.py -q` → **75 tests PASS**
+
+### Next Actions（候補）
+- `guard_text()` summary の活用先を `audit_log` 系に拡張するか検討
+- Po_core 連携 API v1.0 の文書・契約差分の継続整備
+
+---
+
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 

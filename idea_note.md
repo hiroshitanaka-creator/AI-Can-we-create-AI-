@@ -73,8 +73,10 @@
 - [ ] 具体的な小さな改善コード例（方針のみ）
 　- [x] (2026-03-14) Finding.severity をルールごとに設定可能にする（現在は固定）。
     - Notes: `aicw/safety.py` の `scan_privacy_risks()` / `guard_text()` に `severity_overrides` を追加し、ルールごとに `block/warn` 上書きを可能化。`tests/test_p0_privacy.py` に回帰テストを追加。
-　- SECRET_KEYWORD の検出は周辺語を確認して「単語単体の出現」だけでブロックしない（例: password が文脈で説明的に出ているだけなら warn）。
-　- ログ出力用に検出サマリを返す（件数、種類、最初の位置など）を guard_text に追加する。
+　- [x] (2026-03-14) SECRET_KEYWORD の検出は周辺語を確認して「単語単体の出現」だけでブロックしない（例: password が文脈で説明的に出ているだけなら warn）。
+    - Notes: `aicw/safety.py` に説明文脈ヒューリスティクスを追加し、`SECRET_KEYWORD` は `token:` / `password=` の実値提示でない説明用途では warn 扱い。
+　- [x] (2026-03-14) ログ出力用に検出サマリを返す（件数、種類、最初の位置など）を guard_text に追加する。
+    - Notes: `guard_text()` の返り値に `summary` を追加し、`aicw/decision.py` に `dlp_summary` を接続。`tests/test_p0_privacy.py` に回帰テストを追加。
 
 ---
 

@@ -107,6 +107,34 @@ _IMPERATIVE_PATTERNS: List[Tuple[str, re.Pattern[str], int]] = [
 ]
 
 
+def _is_secret_keyword_explanatory_context(text: str, start: int, end: int) -> bool:
+    """SECRET_KEYWORD が説明文脈かどうかを判定する（説明のみなら warn 扱い）。"""
+    left = max(0, start - 18)
+    right = min(len(text), end + 18)
+    window = text[left:right].lower()
+
+    # 「token: ...」「password=...」のような実値提示は高リスクとして block 維持
+    after = text[end:right]
+    if re.match(r"\s*[:=]", after):
+        return False
+
+    explanatory_hints = (
+        "単語",
+        "語",
+        "意味",
+        "説明",
+        "例",
+        "サンプル",
+        "dummy",
+        "placeholder",
+        "keyword",
+        "環境変数名",
+        "禁止",
+        "避ける",
+    )
+    return any(hint in window for hint in explanatory_hints)
+
+
 def scan_privacy_risks(
     text: str,
     severity_overrides: Optional[Dict[str, Literal["block", "warn"]]] = None,
@@ -116,8 +144,12 @@ def scan_privacy_risks(
     severity_overrides = severity_overrides or {}
     findings: List[Finding] = []
     for kind, rx, msg, severity in _PRIVACY_PATTERNS:
-        effective_severity = severity_overrides.get(kind, severity)
+        override_severity = severity_overrides.get(kind)
         for m in rx.finditer(text):
+            effective_severity = override_severity or severity
+            if kind == "SECRET_KEYWORD" and override_severity is None:
+                if _is_secret_keyword_explanatory_context(text, m.start(), m.end()):
+                    effective_severity = "warn"
             findings.append(
                 Finding(
                     kind=kind,
@@ -162,21 +194,36 @@ def redact(text: str, findings: List[Finding]) -> str:
     return "".join(out)
 
 
+def _build_guard_summary(findings: List[Finding]) -> Dict[str, Any]:
+    block_positions = [f.start for f in findings if f.severity == "block"]
+    warn_positions = [f.start for f in findings if f.severity == "warn"]
+    return {
+        "total_findings": len(findings),
+        "block_count": len(block_positions),
+        "warn_count": len(warn_positions),
+        "kinds": sorted({f.kind for f in findings}),
+        "first_block_start": min(block_positions) if block_positions else None,
+        "first_warn_start": min(warn_positions) if warn_positions else None,
+    }
+
+
 def guard_text(
     text: str,
     severity_overrides: Optional[Dict[str, Literal["block", "warn"]]] = None,
-) -> Tuple[bool, str, List[Finding]]:
+) -> Tuple[bool, str, List[Finding], Dict[str, Any]]:
     """
     Returns:
       - allowed: Falseなら停止（No-Go #6）。block レベルの検知があれば False。
       - redacted: block レベルのみ伏せたテキスト（表示用）
       - findings: 全検知結果（block + warn 両方）。呼び出し側が severity で振り分ける。
+      - summary: 検知サマリ（件数・種類・最初の位置）
     """
     findings = scan_privacy_risks(text, severity_overrides=severity_overrides)
+    summary = _build_guard_summary(findings)
     block_findings = [f for f in findings if f.severity == "block"]
     if block_findings:
-        return False, redact(text, block_findings), findings
-    return True, text, findings
+        return False, redact(text, block_findings), findings, summary
+    return True, text, findings, summary
 
 
 def _warn_score(text: str) -> Tuple[int, List[ManipulationHit]]:
