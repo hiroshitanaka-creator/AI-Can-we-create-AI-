@@ -1,6 +1,27 @@
 # Progress Log
 > 各セッションの最後に追記（可能なら日付はJST、形式はYYYY-MM-DD）
 
+## 2026-03-14 (session 22 — reverse_manipulation P1-ngram 強化)
+
+### Goal
+- `check_reverse_manipulation()` の精度を P0-Jaccard から P1-ngram に改善する
+- 偽陽性/偽陰性ケースを追加して安全判定の回帰を防ぐ
+
+### Done
+- `aicw/safety.py` を更新:
+  - 単語 Jaccard に加えて 2-gram 重複率を併用する複合スコア化（P1-ngram）
+  - 入力長・語彙多様性に応じた動的閾値 `_dynamic_reverse_threshold()` を追加
+  - 業務共通語をストップワードへ追加し、語彙ノイズ由来の誤警告を抑制
+  - 同一文入力や共有語彙が十分多いケースへの補正ロジックを追加
+  - `note` を `P1-ngram` 表記に更新
+- `tests/test_reverse_manipulation.py` を更新:
+  - 偽陽性ケース 5件、偽陰性ケース 5件を追加
+  - `note` に `P1-ngram` が含まれることを検証
+
+### Test Results
+- `python -m unittest -v tests.test_reverse_manipulation` → **26 tests PASS**
+- `python -m unittest -v tests.test_po_core_bridge tests.test_p0_manipulation` → **47 tests PASS**
+
 ## 2026-03-09 (session 21 — meta_suggest 誤検知修正フォローアップ)
 
 ### Goal
