@@ -8,7 +8,8 @@ scripts/demo_business.py
 現実的なビジネスシナリオで体験するためのデモです。
 
 シナリオ:
-  中堅製造業（従業員500名）の新規AI採用審査システム導入判断
+  1-3: 既存の企業意思決定（採用/人員配置/脱炭素）
+  4-6: 医療/教育/公共政策の追加デモ
 
 パイプライン:
   1. decision_request → build_decision_report（コア意思決定）
@@ -82,6 +83,54 @@ SCENARIOS: Dict[int, Dict[str, Any]] = {
         },
         "human_decision": "省エネ設備改修と再エネ半々に分散（案B）",
     },
+    4: {
+        "name": "医療AI診断補助の導入判断（Privacy重視）",
+        "request": {
+            "situation": (
+                "患者データをAI診断補助に使う判断。"
+                "症例メモには患者連絡先 tanaka.patient@example.com が含まれている。"
+            ),
+            "constraints": ["個人情報保護", "医療倫理", "説明責任"],
+            "options": [
+                "A: 全症例を即時AI学習に投入",
+                "B: 個人情報を完全匿名化した上で限定導入",
+                "C: 現行運用を維持し、委員会レビュー後に再検討",
+            ],
+            "beneficiaries": ["患者", "医療従事者", "病院"],
+            "affected_structures": ["個人", "関係", "社会", "認知"],
+        },
+        "human_decision": "匿名化ガバナンスを先に整備し、限定導入する（案B）",
+    },
+    5: {
+        "name": "教育現場でのAI作文支援ツール導入判断",
+        "request": {
+            "situation": "中学校でAI作文支援ツールを導入し、学力差と教員負担を同時に改善できるか",
+            "constraints": ["公平性", "学習機会格差の抑制", "教師の説明可能性"],
+            "options": [
+                "A: 全学年で一斉導入し、評価にも反映",
+                "B: 学年限定の試験導入と補助教材の同時提供",
+                "C: AI導入せず従来の作文指導を維持",
+            ],
+            "beneficiaries": ["生徒", "教員", "保護者"],
+            "affected_structures": ["個人", "関係", "社会"],
+        },
+        "human_decision": "試験導入しつつ格差補助策を併走する（案B）",
+    },
+    6: {
+        "name": "公共政策: 監視カメラ増設とプライバシーのトレードオフ",
+        "request": {
+            "situation": "市内犯罪抑止のため監視カメラを増設するが、市民プライバシーとの均衡をどう設計するか",
+            "constraints": ["公共安全", "プライバシー配慮", "透明性"],
+            "options": [
+                "A: 主要エリアに大規模増設し常時解析",
+                "B: 高リスク地点に限定導入し第三者監査を義務化",
+                "C: 増設せず別施策（街灯/見回り）を強化",
+            ],
+            "beneficiaries": ["市民", "自治体", "警察"],
+            "affected_structures": ["個人", "社会", "経済"],
+        },
+        "human_decision": "限定導入 + 第三者監査で均衡を取る（案B）",
+    },
 }
 
 
@@ -94,7 +143,7 @@ def run_demo(scenario_id: int = 1, json_mode: bool = False) -> Dict[str, Any]:
     指定シナリオでデモを実行し、結果を返す。
 
     Args:
-        scenario_id: シナリオ番号（1-3）
+        scenario_id: シナリオ番号（1-6）
         json_mode: True なら JSON 出力のみ
 
     Returns:
