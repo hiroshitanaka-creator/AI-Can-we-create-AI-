@@ -26,11 +26,11 @@
   - Notes: `sprint_plan.md` を作成し、Week1/Week2 の順で実装可能な形に整理
   - Status: done
 
-- [ ] (2026-02-22) Idea: 「候補案の全文」は基本保存しない（その場で表示のみ）
+- [x] (2026-02-22) Idea: 「候補案の全文」は基本保存しない（その場で表示のみ）
   - Source: AI
   - Why: Privacyリスクを最小化しつつ、Explainable selection（なぜ選ばれたか）を保つため
-  - Notes: 永続ログには「候補ID（ハッシュ）」「落選理由コード」「根拠ID」「最終選定理由」だけ残す案
-  - Status: backlog
+  - Notes: `aicw/decision.py` に `build_persistence_record()` を追加し、保存用レコードを最小メタデータ（recommended_id/reason_codes など）のみに制限。`tests/test_persistence_record.py` で入力本文・候補全文・explanation が保存対象に入らないことを固定。
+  - Status: done
 
 - [x] (2026-02-22) Idea: Po_coreに持ち込める”決定支援カーネル”を小さく切り出す
   - Source: AI

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Any, Dict, List, Tuple
 
 from .safety import guard_text, scan_manipulation
@@ -658,3 +660,56 @@ def format_report(report: Dict[str, Any]) -> str:
     lines.append(f"[Disclaimer] {report.get('disclaimer', _DISCLAIMER)}")
 
     return "\n".join(lines)
+
+
+def build_persistence_record(report: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    永続保存向けの最小レコードを作る。
+
+    Privacy 方針:
+      - 入力本文（situation など）は保存しない
+      - 候補案の全文（candidates.summary）は保存しない
+      - explanation / uncertainties など自由記述は保存しない
+
+    Returns:
+      status=ok:
+        {
+          "status": "ok",
+          "recommended_id": "A|B|C",
+          "reason_codes": [...],
+          "version": "p0",
+          "record_hash": "sha256...",
+        }
+      status=blocked:
+        {
+          "status": "blocked",
+          "blocked_by": "#6 Privacy|#5 Existence Ethics|#4 Manipulation",
+          "detected": [...],
+          "version": "p0",
+          "record_hash": "sha256...",
+        }
+    """
+    status = report.get("status")
+    version = str(report.get("meta", {}).get("version", "unknown"))
+
+    if status == "ok":
+        selection = report.get("selection") or {}
+        out = {
+            "status": "ok",
+            "recommended_id": selection.get("recommended_id"),
+            "reason_codes": sorted(list(selection.get("reason_codes") or [])),
+            "version": version,
+        }
+    elif status == "blocked":
+        out = {
+            "status": "blocked",
+            "blocked_by": report.get("blocked_by"),
+            "detected": sorted([str(x) for x in (report.get("detected") or [])]),
+            "version": version,
+        }
+    else:
+        raise ValueError(f"unsupported report status: {status!r}")
+
+    payload = json.dumps(out, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    out["record_hash"] = hashlib.sha256(payload).hexdigest()
+    return out
